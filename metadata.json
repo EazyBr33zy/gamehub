@@ -1,0 +1,6 @@
+{
+  "name": "Game Hub — Rastreador de Jogos & Backlog",
+  "description": "Gerenciador completo de backlog gamer, registro de horas de gameplay, metas anuais e estatísticas. 100% responsivo para desktop e mobile, pronto para HostGator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
