@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Game } from '../types';
 import { GameCover } from './GameCover';
+import { ConsoleIcon, getConsoleColor } from './ConsoleIcon';
 import { formatMinutes, formatDateBR } from '../utils/storage';
 
 interface PlayingViewProps {
@@ -27,6 +28,17 @@ interface PlayingViewProps {
 }
 
 type Filtro = 'todos' | 'recentes' | 'perto';
+
+/** Última sessão registrada de um jogo (data + hora), ou string vazia */
+const lastSessionKey = (g: Game): string => {
+  const ss = g.sessoes || [];
+  if (ss.length === 0) return '';
+  const last = [...ss].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio))[0];
+  return `${last.data}T${last.inicio || '00:00'}`;
+};
+
+/** Data/hora da última atividade: sessão mais recente ou data de início */
+const lastActivityKey = (g: Game): string => lastSessionKey(g) || (g.inicio ? `${g.inicio}T00:00` : '');
 
 const daysSince = (d?: string) => {
   if (!d) return 0;
@@ -57,10 +69,11 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
 
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
+  // Ordem padrão: jogo com a sessão registrada mais recente primeiro
   const jogando = [...jogandoBase].sort((a, b) => {
     if (filtro === 'recentes') return (b.inicio || '').localeCompare(a.inicio || '');
     if (filtro === 'perto') return (percentOf(b) ?? -1) - (percentOf(a) ?? -1);
-    return 0;
+    return lastActivityKey(b).localeCompare(lastActivityKey(a));
   });
 
   const destaque = jogando[0];

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Game, GameStatus } from '../types';
 import { GameCover } from './GameCover';
-import { ConsoleIcon } from './ConsoleIcon';
+import { ConsoleIcon, getConsoleColor } from './ConsoleIcon';
 import { formatMinutes, formatDateBR } from '../utils/storage';
 
 interface BacklogViewProps {
@@ -100,6 +100,16 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
     });
     return groups;
   }, [filteredGames, groupBy]);
+
+  // Estatísticas gerais do backlog (para o cabeçalho)
+  const statsBacklog = useMemo(() => {
+    const biblioteca = games.filter((g) => g.status === 'backlog' || g.status === 'zerado');
+    return {
+      total: biblioteca.length,
+      generos: new Set(biblioteca.map((g) => (g.genero || '').trim()).filter(Boolean)).size,
+      zerados: biblioteca.filter((g) => g.status === 'zerado').length,
+    };
+  }, [games]);
 
   // Grupos ordenados: o que tem mais jogos vem primeiro (e é o único aberto por padrão)
   const groupEntries = useMemo(
@@ -199,8 +209,24 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
           </div>
         </div>
 
+        {/* Cabeçalho de totais: jogos no backlog, gêneros e zerados */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Jogos na biblioteca</p>
+            <p className="font-display text-lg font-bold text-cyan-300">{statsBacklog.total}</p>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Gêneros</p>
+            <p className="font-display text-lg font-bold text-violet-300">{statsBacklog.generos}</p>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2.5 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Zerados</p>
+            <p className="font-display text-lg font-bold text-emerald-300">{statsBacklog.zerados}</p>
+          </div>
+        </div>
+
         {/* Filter & Search Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
           {/* Search Input */}
           <div className="relative sm:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
@@ -220,9 +246,25 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full rounded-lg bg-slate-900/90 border border-slate-800 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
             >
-              <option value="todos">Status: Quero jogar + Zerados</option>
+              <option value="todos">Status: Todos (Quero jogar + Zerados)</option>
               <option value="backlog">Quero Jogar</option>
               <option value="zerado">Zerados</option>
+            </select>
+          </div>
+
+          {/* Genero Filter */}
+          <div>
+            <select
+              value={genreFilter}
+              onChange={(e) => setGenreFilter(e.target.value)}
+              className="w-full rounded-lg bg-slate-900/90 border border-slate-800 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
+            >
+              <option value="todos">Gênero: Todos</option>
+              {uniqueGenres.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -300,14 +342,24 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
                     ) : (
                       <ChevronUp className="h-4 w-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                     )}
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-cyan-400">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                      style={
+                        groupBy === 'console'
+                          ? { background: getConsoleColor(groupTitle) + '22', color: getConsoleColor(groupTitle) }
+                          : { background: '#1e293b', color: '#22d3ee' }
+                      }
+                    >
                       {groupBy === 'console' ? (
-                        <ConsoleIcon name={groupTitle} className="h-4 w-4" />
+                        <ConsoleIcon name={groupTitle} className="h-4 w-4" colored={false} />
                       ) : (
                         <Layers className="h-4 w-4" />
                       )}
                     </span>
-                    <h2 className="font-display text-base font-bold text-white group-hover:text-cyan-400 transition-colors">
+                    <h2
+                      className="font-display text-base font-bold transition-colors group-hover:text-cyan-400"
+                      style={{ color: groupBy === 'console' ? getConsoleColor(groupTitle) : '#ffffff' }}
+                    >
                       {groupTitle}
                     </h2>
                     <span className="text-xs text-slate-400">
@@ -335,7 +387,7 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
                 {!isCollapsed && (
                   <div className="pt-4">
                     {viewMode === 'grid' ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
                         {list.map((game) => (
                           <div
                             key={game.id}

@@ -81,8 +81,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return mmdd === todayMMDD && yyyy !== String(currentYear);
   });
 
-  // Hall da Fama: jogos com prêmios GOT do ano até o momento (propriedades got_* do Obsidian)
-  const hallDaFama = zeradosEsteAno.filter((g) => g.got && Object.keys(g.got).length > 0);
+  // Hall da Fama: jogos premiados no GOT do ano até o momento.
+  // Prioridade 1: seleções feitas na aba Wrap-Up -> GOT (config.gotPremios[ano] = { categoria: jogoId }).
+  // Prioridade 2: propriedades got_* sincronizadas do Obsidian.
+  const gotSelecionado = config.gotPremios?.[String(currentYear)];
+  const hallDaFama = (() => {
+    if (gotSelecionado && Object.keys(gotSelecionado).length > 0) {
+      const ids = new Set(Object.values(gotSelecionado).filter(Boolean));
+      return zeradosEsteAno.filter((g) => ids.has(g.id));
+    }
+    return zeradosEsteAno.filter((g) => g.got && Object.keys(g.got).length > 0);
+  })();
 
   // Cálculo de horas totais
   const tempoTotalMinutos = games.reduce((sum, g) => sum + (g.tempo || 0), 0);
@@ -377,7 +386,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* RECÉM ZERADOS (últimos 5 jogos concluídos) */}
+      {/* RECÉM ZERADOS (últimos 5 jogos concluídos — destaque + lista) */}
       {/* ========================================================================= */}
       {recemZerados.length > 0 && (
         <section aria-labelledby="recem-zerados-title">
@@ -388,43 +397,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {recemZerados.map((game) => (
-              <div
-                key={game.id}
-                onClick={() => onSelectGame(game)}
-                className="group obs-card obs-card-hover cursor-pointer p-2.5"
-              >
-                <GameCover
-                  capa={game.capa}
-                  nome={game.nome}
-                  genero={game.genero}
-                  consoleName={game.console}
-                  aspect="portrait"
-                />
-                <div className="mt-2 min-w-0">
-                  <h4 className="text-xs font-semibold text-slate-200 group-hover:text-violet-300 transition-colors truncate">
-                    {game.nome}
-                  </h4>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
-                    <ConsoleIcon name={game.console} className="h-3 w-3 shrink-0" />
-                    <span>{formatDateBR(game.fim)}</span>
+          <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.08] via-slate-900/60 to-slate-950/60 p-3 sm:p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-5">
+              {recemZerados.map((game, idx) => (
+                <button
+                  key={game.id}
+                  onClick={() => onSelectGame(game)}
+                  className={`group flex items-center gap-3 rounded-xl border p-2 text-left transition-colors ${
+                    idx === 0
+                      ? 'border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/15'
+                      : 'border-slate-800/70 bg-slate-900/50 hover:border-slate-600 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="w-12 shrink-0 overflow-hidden rounded-lg">
+                    <GameCover
+                      capa={game.capa}
+                      nome={game.nome}
+                      genero={game.genero}
+                      consoleName={game.console}
+                      aspect="portrait"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-slate-200 group-hover:text-emerald-300 transition-colors">
+                      {game.nome}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-400">
+                      <ConsoleIcon name={game.console} className="h-3 w-3 shrink-0" />
+                      <span style={{ color: getConsoleColor(game.console) }} className="font-medium truncate">{game.console}</span>
+                    </p>
+                    <p className="text-[10px] text-slate-500">{formatDateBR(game.fim)}</p>
                   </div>
                   {typeof game.nota === 'number' && (
-                    <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-300">
+                    <span className="flex shrink-0 items-center gap-1 text-[11px] font-bold text-amber-300">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span>{game.nota.toFixed(1)}</span>
-                    </div>
+                      {game.nota.toFixed(1)}
+                    </span>
                   )}
-                </div>
-              </div>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
       )}
 
       {/* ========================================================================= */}
-      {/* MÁQUINA DO TEMPO (zerados no mesmo dia/mês em anos anteriores) */}
+      {/* MÁQUINA DO TEMPO (zerados no mesmo dia/mês em anos anteriores — destaque + lista) */}
       {/* ========================================================================= */}
       {maquinaDoTempo.length > 0 && (
         <section aria-labelledby="maquina-tempo-title">
@@ -435,39 +453,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {maquinaDoTempo.map((game) => {
-              const anoZerado = (game.fim || '').slice(0, 4);
-              return (
-                <div
-                  key={`mt-${game.id}`}
-                  onClick={() => onSelectGame(game)}
-                  className="group obs-card obs-card-hover cursor-pointer p-2.5 obs-pink"
-                >
-                  <div className="relative">
-                    <GameCover
-                      capa={game.capa}
-                      nome={game.nome}
-                      genero={game.genero}
-                      consoleName={game.console}
-                      aspect="portrait"
-                    />
-                    <span className="absolute top-1.5 left-1.5 rounded-md bg-slate-950/90 border border-fuchsia-500/40 px-1.5 py-0.5 text-[10px] font-bold text-fuchsia-300 backdrop-blur-sm">
+          <div className="rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/[0.08] via-purple-950/40 to-slate-950/60 p-3 sm:p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-5">
+              {maquinaDoTempo.slice(0, 5).map((game, idx) => {
+                const anoZerado = (game.fim || '').slice(0, 4);
+                const anosAtras = currentYear - Number(anoZerado);
+                return (
+                  <button
+                    key={`mt-${game.id}`}
+                    onClick={() => onSelectGame(game)}
+                    className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border p-2 text-left transition-colors ${
+                      idx === 0
+                        ? 'border-fuchsia-400/40 bg-fuchsia-500/10 hover:bg-fuchsia-500/15'
+                        : 'border-slate-800/70 bg-slate-900/50 hover:border-slate-600 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span className="absolute right-1.5 top-1.5 rounded-md bg-slate-950/90 border border-fuchsia-500/40 px-1.5 py-0.5 text-[9px] font-bold text-fuchsia-300">
                       {anoZerado}
                     </span>
-                  </div>
-                  <div className="mt-2 min-w-0">
-                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-fuchsia-300 transition-colors truncate">
-                      {game.nome}
-                    </h4>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
-                      <CalendarHeart className="h-3 w-3 shrink-0 text-fuchsia-400" />
-                      <span>Há {currentYear - Number(anoZerado)} {currentYear - Number(anoZerado) === 1 ? 'ano' : 'anos'}</span>
+                    <div className="w-12 shrink-0 overflow-hidden rounded-lg">
+                      <GameCover
+                        capa={game.capa}
+                        nome={game.nome}
+                        genero={game.genero}
+                        consoleName={game.console}
+                        aspect="portrait"
+                      />
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                    <div className="min-w-0 flex-1 pr-6">
+                      <p className="truncate text-xs font-semibold text-slate-200 group-hover:text-fuchsia-300 transition-colors">
+                        {game.nome}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-400">
+                        <CalendarHeart className="h-3 w-3 shrink-0 text-fuchsia-400" />
+                        <span>Há {anosAtras} {anosAtras === 1 ? 'ano' : 'anos'}</span>
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}
