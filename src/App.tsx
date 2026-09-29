@@ -353,6 +353,7 @@ export default function App() {
             onQuickFinish={handleOpenFinishModal}
             onDeleteGame={handleDeleteGame}
             onOpenAddModal={handleOpenAddModal}
+            onOpenBackupModal={() => setIsBackupModalOpen(true)}
           />
         )}
 

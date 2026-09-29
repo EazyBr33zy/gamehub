@@ -13,7 +13,8 @@ import {
   Layers,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText
 } from 'lucide-react';
 import { Game, GameStatus } from '../types';
 import { GameCover } from './GameCover';
@@ -27,6 +28,8 @@ interface BacklogViewProps {
   onQuickFinish: (game: Game) => void;
   onDeleteGame: (gameId: string) => void;
   onOpenAddModal: () => void;
+  /** Abre o painel de Backup & Sincronização (seção "Importar do Obsidian") */
+  onOpenBackupModal?: () => void;
 }
 
 export const BacklogView: React.FC<BacklogViewProps> = ({
@@ -36,6 +39,7 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
   onQuickFinish,
   onDeleteGame,
   onOpenAddModal,
+  onOpenBackupModal,
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('backlog');
@@ -196,13 +200,26 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={onOpenAddModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg shadow-sm transition-all"
-            >
-              <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-              <span>Novo Jogo</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {onOpenBackupModal && (
+                <button
+                  onClick={onOpenBackupModal}
+                  title="Importar todos os jogos das notas do Obsidian de uma vez"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-fuchsia-200 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 rounded-lg transition-all"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Importar do Obsidian</span>
+                </button>
+              )}
+
+              <button
+                onClick={onOpenAddModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg shadow-sm transition-all"
+              >
+                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                <span>Novo Jogo</span>
+              </button>
+            </div>
           </div>
         </div>
 
