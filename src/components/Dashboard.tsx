@@ -5,17 +5,19 @@ import {
   Clock,
   Star,
   Flame,
-  ArrowRight,
   Plus,
-  Play,
   CheckCircle2,
   ChevronRight,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  History,
+  Medal,
+  CalendarHeart,
 } from 'lucide-react';
 import { Game, AppConfig } from '../types';
 import { NowPlayingSlider } from './NowPlayingSlider';
 import { GameCover } from './GameCover';
+import { ConsoleIcon, getConsoleColor } from './ConsoleIcon';
 import { formatMinutes, formatDateBR } from '../utils/storage';
 
 interface DashboardProps {
@@ -29,6 +31,14 @@ interface DashboardProps {
   onOpenAddModal: () => void;
   onChangeTab: (tab: 'inicio' | 'backlog' | 'jogando' | 'wrap') => void;
 }
+
+/** Última sessão registrada de um jogo (data + hora), ou string vazia */
+const lastSessionKey = (g: Game): string => {
+  const ss = g.sessoes || [];
+  if (ss.length === 0) return '';
+  const last = [...ss].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio))[0];
+  return `${last.data}T${last.inicio || '00:00'}`;
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   games,
@@ -46,12 +56,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1; // 1-12
+  const todayMMDD = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   // Filtragem dos jogos
   const zerados = games.filter((g) => g.status === 'zerado');
   const zeradosEsteAno = zerados.filter((g) => (g.fim || '').startsWith(String(currentYear)));
-  const jogando = games.filter((g) => g.status === 'jogando');
+  const jogando = [...games.filter((g) => g.status === 'jogando')].sort(
+    (a, b) => lastSessionKey(b).localeCompare(lastSessionKey(a)) || (b.inicio || '').localeCompare(a.inicio || '')
+  );
   const backlog = games.filter((g) => g.status === 'backlog');
+
+  // Recém zerados: os 5 últimos concluídos
+  const recemZerados = [...zerados]
+    .filter((g) => g.fim)
+    .sort((a, b) => (b.fim || '').localeCompare(a.fim || ''))
+    .slice(0, 5);
+
+  // Máquina do tempo: jogos zerados no MESMO dia/mês em anos anteriores
+  const maquinaDoTempo = zerados.filter((g) => {
+    const fim = g.fim || '';
+    if (fim.length < 10) return false;
+    const mmdd = fim.slice(5, 10); // MM-DD
+    const yyyy = fim.slice(0, 4);
+    return mmdd === todayMMDD && yyyy !== String(currentYear);
+  });
+
+  // Hall da Fama: jogos com prêmios GOT do ano até o momento (propriedades got_* do Obsidian)
+  const hallDaFama = zeradosEsteAno.filter((g) => g.got && Object.keys(g.got).length > 0);
 
   // Cálculo de horas totais
   const tempoTotalMinutos = games.reduce((sum, g) => sum + (g.tempo || 0), 0);
@@ -143,11 +174,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           Métricas Gerais
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
-          {/* Card 1: Zerados no Ano */}
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-4 transition-all hover:border-slate-700">
+          {/* Card 1: Zerados no Ano — roxo */}
+          <div className="obs-card obs-card-hover relative overflow-hidden p-4 obs-purple">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>Zerados em {currentYear}</span>
-              <Trophy className="h-4 w-4 text-cyan-400" />
+              <Trophy className="h-4 w-4 obs-color" />
             </div>
             <div className="mt-2 flex items-baseline gap-1">
               <span className="font-display text-2xl sm:text-3xl font-bold tabular-nums text-white">
@@ -155,16 +187,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </span>
               <span className="text-xs text-slate-500">/ {meta} meta</span>
             </div>
-            <p className="mt-1 text-xs text-cyan-400/90 font-medium">
+            <p className="mt-1 text-xs obs-color font-medium">
               {percentualMeta}% atingido
             </p>
           </div>
 
-          {/* Card 2: Jogando Agora */}
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-4 transition-all hover:border-slate-700">
+          {/* Card 2: Em Andamento — azul */}
+          <div className="obs-card obs-card-hover relative overflow-hidden p-4 obs-blue">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>Em Andamento</span>
-              <Gamepad2 className="h-4 w-4 text-emerald-400" />
+              <Gamepad2 className="h-4 w-4 obs-color" />
             </div>
             <div className="mt-2 flex items-baseline gap-1">
               <span className="font-display text-2xl sm:text-3xl font-bold tabular-nums text-white">
@@ -177,11 +210,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          {/* Card 3: Total Zerados */}
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-4 transition-all hover:border-slate-700">
+          {/* Card 3: Total Zerados — verde */}
+          <div className="obs-card obs-card-hover relative overflow-hidden p-4 obs-green">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>Total Zerados</span>
-              <CheckCircle2 className="h-4 w-4 text-indigo-400" />
+              <CheckCircle2 className="h-4 w-4 obs-color" />
             </div>
             <div className="mt-2">
               <span className="font-display text-2xl sm:text-3xl font-bold tabular-nums text-white">
@@ -193,11 +227,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          {/* Card 4: Horas Totais */}
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-4 transition-all hover:border-slate-700">
+          {/* Card 4: Horas Totais — âmbar */}
+          <div className="obs-card obs-card-hover relative overflow-hidden p-4 obs-amber">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>Horas de Jogo</span>
-              <Clock className="h-4 w-4 text-amber-400" />
+              <Clock className="h-4 w-4 obs-color" />
             </div>
             <div className="mt-2">
               <span className="font-display text-2xl sm:text-3xl font-bold tabular-nums text-white">
@@ -209,11 +244,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
-          {/* Card 5: Nota Média */}
-          <div className="col-span-2 sm:col-span-1 rounded-xl border border-slate-800/80 bg-slate-900/70 p-4 transition-all hover:border-slate-700">
+          {/* Card 5: Nota Média — rosa */}
+          <div className="col-span-2 sm:col-span-1 obs-card obs-card-hover relative overflow-hidden p-4 obs-pink">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>Nota Média</span>
-              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400/20" />
+              <Star className="h-4 w-4 obs-color fill-current opacity-40" />
             </div>
             <div className="mt-2 flex items-baseline gap-1">
               <span className="font-display text-2xl sm:text-3xl font-bold tabular-nums text-white">
@@ -229,14 +265,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </section>
 
       {/* ========================================================================= */}
-      {/* META ANUAL & PROJEÇÃO */}
+      {/* META DO ANO (estilo Obsidian) & PROJEÇÃO */}
       {/* ========================================================================= */}
-      <section className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-5 sm:p-6">
+      <section className="obs-card relative overflow-hidden p-5 sm:p-6 obs-indigo">
+        <span className="obs-accent-bar" style={{ background: 'linear-gradient(90deg, #a78bfa, #60a5fa, transparent)' }} />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-display text-base font-semibold text-white">
-                Meta de Zerados em {currentYear}
+              <h3 className="obs-title text-base font-semibold text-white">
+                Meta do Ano — {currentYear}
               </h3>
               {!editingMeta ? (
                 <button
@@ -244,7 +281,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     setTempMeta(meta);
                     setEditingMeta(true);
                   }}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 underline underline-offset-2 ml-1"
+                  className="text-xs text-violet-400 hover:text-violet-300 underline underline-offset-2 ml-1"
                 >
                   Alterar meta
                 </button>
@@ -260,7 +297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   />
                   <button
                     onClick={handleSaveMeta}
-                    className="px-2 py-0.5 rounded bg-cyan-500 text-slate-950 text-xs font-semibold hover:bg-cyan-400"
+                    className="px-2 py-0.5 rounded bg-violet-500 text-white text-xs font-semibold hover:bg-violet-400"
                   >
                     Salvar
                   </button>
@@ -274,13 +311,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Ritmo atual de <span className="font-semibold text-slate-200">{ritmoMensal} jogos/mês</span> · Projeção de{' '}
-              <span className="font-semibold text-slate-200">{projecaoAnual} jogos</span> até dezembro
+              Ritmo atual de <span className="font-semibold text-violet-300">{ritmoMensal} jogos/mês</span> · Projeção de{' '}
+              <span className="font-semibold text-violet-300">{projecaoAnual} jogos</span> até dezembro
             </p>
           </div>
 
           <div className="text-right flex sm:flex-col items-center sm:items-end justify-between">
-            <span className="font-display text-2xl font-bold tabular-nums text-cyan-400">
+            <span className="font-display text-2xl font-bold tabular-nums text-violet-400">
               {percentualMeta}%
             </span>
             <span className="text-xs text-slate-400">
@@ -292,49 +329,210 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Progress bar */}
         <div className="mt-3 h-2.5 w-full rounded-full bg-slate-950 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-500"
-            style={{ width: `${percentualMeta}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${percentualMeta}%`, background: 'linear-gradient(90deg, #a78bfa, #60a5fa)' }}
           />
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* RITMO RECENTE (Momentum) */}
+      {/* RITMO DA SEMANA (cores estilo Obsidian) */}
       {/* ========================================================================= */}
       <section aria-labelledby="momentum-title">
         <div className="flex items-center gap-2 mb-3">
-          <Flame className="h-4 w-4 text-orange-400" />
-          <h2 id="momentum-title" className="font-display text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Ritmo de Vitórias
+          <Flame className="h-4 w-4 text-violet-400" />
+          <h2 id="momentum-title" className="obs-title text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Ritmo da Semana
           </h2>
         </div>
 
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 sm:p-4 text-center">
+          <div className="obs-card obs-card-hover relative overflow-hidden p-3 sm:p-4 text-center obs-purple">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Últimos 7 dias</span>
-            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums text-cyan-400 mt-1">
+            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums obs-color mt-1">
               +{ult7.count}
             </p>
             <span className="text-[11px] text-slate-400">{formatMinutes(ult7.minutos)}</span>
           </div>
 
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 sm:p-4 text-center">
+          <div className="obs-card obs-card-hover relative overflow-hidden p-3 sm:p-4 text-center obs-blue">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Últimos 30 dias</span>
-            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums text-emerald-400 mt-1">
+            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums obs-color mt-1">
               +{ult30.count}
             </p>
             <span className="text-[11px] text-slate-400">{formatMinutes(ult30.minutos)}</span>
           </div>
 
-          <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 sm:p-4 text-center">
+          <div className="obs-card obs-card-hover relative overflow-hidden p-3 sm:p-4 text-center obs-teal">
+            <span className="obs-accent-bar" style={{ background: 'var(--obs-c)' }} />
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Últimos 90 dias</span>
-            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums text-purple-400 mt-1">
+            <p className="font-display text-xl sm:text-2xl font-bold tabular-nums obs-color mt-1">
               +{ult90.count}
             </p>
             <span className="text-[11px] text-slate-400">{formatMinutes(ult90.minutos)}</span>
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* RECÉM ZERADOS (últimos 5 jogos concluídos) */}
+      {/* ========================================================================= */}
+      {recemZerados.length > 0 && (
+        <section aria-labelledby="recem-zerados-title">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <h2 id="recem-zerados-title" className="obs-title text-sm font-semibold uppercase tracking-wider text-slate-400">
+              Recém Zerados
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {recemZerados.map((game) => (
+              <div
+                key={game.id}
+                onClick={() => onSelectGame(game)}
+                className="group obs-card obs-card-hover cursor-pointer p-2.5"
+              >
+                <GameCover
+                  capa={game.capa}
+                  nome={game.nome}
+                  genero={game.genero}
+                  consoleName={game.console}
+                  aspect="portrait"
+                />
+                <div className="mt-2 min-w-0">
+                  <h4 className="text-xs font-semibold text-slate-200 group-hover:text-violet-300 transition-colors truncate">
+                    {game.nome}
+                  </h4>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
+                    <ConsoleIcon name={game.console} className="h-3 w-3 shrink-0" />
+                    <span>{formatDateBR(game.fim)}</span>
+                  </div>
+                  {typeof game.nota === 'number' && (
+                    <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-300">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <span>{game.nota.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MÁQUINA DO TEMPO (zerados no mesmo dia/mês em anos anteriores) */}
+      {/* ========================================================================= */}
+      {maquinaDoTempo.length > 0 && (
+        <section aria-labelledby="maquina-tempo-title">
+          <div className="flex items-center gap-2 mb-3">
+            <History className="h-4 w-4 text-fuchsia-400" />
+            <h2 id="maquina-tempo-title" className="obs-title text-sm font-semibold uppercase tracking-wider text-slate-400">
+              Máquina do Tempo — zerados em {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {maquinaDoTempo.map((game) => {
+              const anoZerado = (game.fim || '').slice(0, 4);
+              return (
+                <div
+                  key={`mt-${game.id}`}
+                  onClick={() => onSelectGame(game)}
+                  className="group obs-card obs-card-hover cursor-pointer p-2.5 obs-pink"
+                >
+                  <div className="relative">
+                    <GameCover
+                      capa={game.capa}
+                      nome={game.nome}
+                      genero={game.genero}
+                      consoleName={game.console}
+                      aspect="portrait"
+                    />
+                    <span className="absolute top-1.5 left-1.5 rounded-md bg-slate-950/90 border border-fuchsia-500/40 px-1.5 py-0.5 text-[10px] font-bold text-fuchsia-300 backdrop-blur-sm">
+                      {anoZerado}
+                    </span>
+                  </div>
+                  <div className="mt-2 min-w-0">
+                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-fuchsia-300 transition-colors truncate">
+                      {game.nome}
+                    </h4>
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
+                      <CalendarHeart className="h-3 w-3 shrink-0 text-fuchsia-400" />
+                      <span>Há {currentYear - Number(anoZerado)} {currentYear - Number(anoZerado) === 1 ? 'ano' : 'anos'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ========================================================================= */}
+      {/* HALL DA FAMA (jogos com prêmios GOT do ano até o momento) */}
+      {/* ========================================================================= */}
+      {hallDaFama.length > 0 && (
+        <section aria-labelledby="hall-fama-title">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Medal className="h-4 w-4 text-amber-400" />
+              <h2 id="hall-fama-title" className="obs-title text-sm font-semibold uppercase tracking-wider text-slate-400">
+                Hall da Fama — {currentYear}
+              </h2>
+            </div>
+            <button
+              onClick={() => onChangeTab('wrap')}
+              className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              <span>Ver GOT completo</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {hallDaFama.map((game) => {
+              const premios = Object.entries(game.got || {})
+                .filter(([k]) => k !== 'jogo')
+                .map(([k]) => k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, ' '));
+              const isGoty = !!(game.got && game.got.jogo);
+              return (
+                <div
+                  key={`hf-${game.id}`}
+                  onClick={() => onSelectGame(game)}
+                  className="group obs-card obs-card-hover cursor-pointer flex items-center gap-3 p-3 obs-amber"
+                >
+                  <div className="w-12 shrink-0">
+                    <GameCover
+                      capa={game.capa}
+                      nome={game.nome}
+                      genero={game.genero}
+                      consoleName={game.console}
+                      aspect="portrait"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 truncate">
+                      <Trophy className="h-3 w-3 shrink-0" />
+                      {isGoty ? 'GOTY' : premios.slice(0, 2).join(' · ') || 'Premiado'}
+                    </p>
+                    <h4 className="truncate font-display text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                      {game.nome}
+                    </h4>
+                    <p className="truncate text-[11px] text-slate-400">
+                      <span style={{ color: getConsoleColor(game.console) }} className="font-semibold">{game.console}</span>
+                      {typeof game.nota === 'number' ? ` · ⭐ ${game.nota.toFixed(1)}` : ''}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ========================================================================= */}
       {/* PRÓXIMOS DO BACKLOG (Sugestões rápidas) */}

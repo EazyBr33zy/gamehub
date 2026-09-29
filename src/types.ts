@@ -33,7 +33,22 @@ export interface AppConfig {
   metaAnual: number;
   userName: string;
   anoSelecionado?: number;
+  /** Prêmios do GOT escolhido pelo usuário (chave = jogo id, valor = categoria -> jogo premiado) */
+  gotPremios?: Record<string, Record<string, string>>;
 }
+
+/** Categorias de prêmio da seção GOT (Wrap-Up) */
+export const GOT_CATEGORIES: { key: string; emoji: string; label: string; color: string }[] = [
+  { key: 'jogo', emoji: '👑', label: 'Jogo do Ano', color: '#fbbf24' },
+  { key: 'gameplay', emoji: '🎮', label: 'Gameplay', color: '#22d3ee' },
+  { key: 'narrativa', emoji: '📖', label: 'Narrativa', color: '#c084fc' },
+  { key: 'arte', emoji: '🎨', label: 'Arte', color: '#fb923c' },
+  { key: 'indie', emoji: '🌱', label: 'Indie', color: '#34d399' },
+  { key: 'surpresa', emoji: '💥', label: 'Surpresa', color: '#f43f5e' },
+  { key: 'retro', emoji: '🕹️', label: 'Retrô', color: '#a78bfa' },
+  { key: 'dificil', emoji: '💀', label: 'Difícil', color: '#fb7185' },
+  { key: 'pior', emoji: '📉', label: 'Pior', color: '#94a3b8' },
+];
 
 export interface GameSession {
   gameId: string;
