@@ -37,3 +37,48 @@ body {
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
+
+/* =========================================================================
+   PALETA OBSIDIAN (roxo/azul escuro) — usada em cards, seções e destaques
+   ========================================================================= */
+.obs-card {
+  border-radius: 0.9rem;
+  border: 1px solid #302654;
+  background: linear-gradient(160deg, #171225 0%, #0f0c1d 100%);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+.obs-card-hover {
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.obs-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #7c3aed;
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.18);
+}
+.obs-accent-bar {
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 3px;
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+}
+.obs-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+/* Cores de destaque no estilo Obsidian (para os cards de stats e ritmo) */
+.obs-purple  { --obs-c: #a78bfa; }
+.obs-blue    { --obs-c: #60a5fa; }
+.obs-teal    { --obs-c: #2dd4bf; }
+.obs-amber   { --obs-c: #fbbf24; }
+.obs-pink    { --obs-c: #f472b6; }
+.obs-red     { --obs-c: #fb7185; }
+.obs-green   { --obs-c: #34d399; }
+.obs-indigo  { --obs-c: #818cf8; }
+.obs-color {
+  color: var(--obs-c);
+}
+.obs-bg-soft {
+  background: color-mix(in srgb, var(--obs-c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--obs-c) 35%, transparent);
+}

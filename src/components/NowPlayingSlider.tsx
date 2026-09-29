@@ -13,8 +13,15 @@ interface NowPlayingSliderProps {
   onGoBacklog: () => void;
 }
 
-/** Minutos que faltam para zerar (quem não tem estimativa vai para o fim da fila) */
-const remainingMinutes = (g: Game) => (g.est && g.est > 0 ? Math.max(0, g.est * 60 - (g.tempo || 0)) : Infinity);
+/** Data+hora da última sessão registrada (ou início do jogo, como fallback) */
+const lastActivityKey = (g: Game): string => {
+  const ss = g.sessoes || [];
+  if (ss.length > 0) {
+    const last = [...ss].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio))[0];
+    return `${last.data}T${last.inicio || '00:00'}`;
+  }
+  return g.inicio ? `${g.inicio}T00:00` : '';
+};
 
 const AUTOPLAY_MS = 6000;
 
@@ -26,14 +33,14 @@ export const NowPlayingSlider: React.FC<NowPlayingSliderProps> = ({
   onQuickFinish,
   onGoBacklog,
 }) => {
-  // Ordem: o que está mais perto de zerar aparece primeiro
+  // Ordem: o jogo com a sessão registrada mais recente aparece primeiro
   const sorted = useMemo(
     () =>
       [...games].sort((a, b) => {
-        const ra = remainingMinutes(a);
-        const rb = remainingMinutes(b);
-        if (ra === rb) return 0;
-        return ra < rb ? -1 : 1;
+        const ka = lastActivityKey(a);
+        const kb = lastActivityKey(b);
+        if (ka === kb) return 0;
+        return kb.localeCompare(ka);
       }),
     [games]
   );
