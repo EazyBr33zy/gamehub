@@ -52,15 +52,38 @@ async function searchCoverRawg(title: string): Promise<string | null> {
   }
 }
 
+/** Fallback sem chave: API pública de capas usada pelo Steam/SteamDB (CDN do Steam, aceita <img>) */
 async function searchCoverArtApi(title: string): Promise<string | null> {
   try {
-    const r = await fetch(`https://coverartopenapi.steamdb.app/search?term=${encodeURIComponent(title)}`);
+    const r = await fetch(
+      `https://coverartopenapi.steamdb.app/search?term=${encodeURIComponent(title)}&appid_filterlist=steam,pc`
+    );
     if (!r.ok) return null;
     const data = await r.json();
-    const first = Array.isArray(data) ? data[0] : null;
-    const url: string | undefined = first?.games?.[0]?.img;
+    const results: any[] = Array.isArray(data) ? data : [];
+    const nt = norm(title);
+    // Preferência por correspondência exata de nome
+    const exact = results.find((x) => norm(x?.name || '') === nt && x?.games?.[0]?.img);
+    const pick = exact || results.find((x) => x?.games?.[0]?.img);
+    const url: string | undefined = pick?.games?.[0]?.img;
     if (!url) return null;
-    return `${url}?format=jpg&quality=80&width=300`;
+    return `${url}?format=jpg&quality=80&width=400`;
+  } catch {
+    return null;
+  }
+}
+
+/** Último recurso: procura a primeira URL de imagem embutida na página de imagens do DuckDuckGo */
+async function searchCoverDuckDuckGo(title: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `https://duckduckgo.com/?q=${encodeURIComponent(title + ' game cover art boxart')}&t=h_&iar=images&iax=images&ia=images`
+    );
+    if (!r.ok) return null;
+    const text = await r.text();
+    const m = text.match(/"image":"(https:[^"]+?)"/);
+    if (!m) return null;
+    return m[1].replace(/\\\//g, '/');
   } catch {
     return null;
   }
@@ -81,7 +104,10 @@ export async function fillMissingCovers(
     const title = cleanGameTitle(g.nome);
     let url: string | null = null;
     if (title.length >= 2) {
-      url = (await searchCoverRawg(title)) || (await searchCoverArtApi(title));
+      url =
+        (await searchCoverRawg(title)) ||
+        (await searchCoverArtApi(title)) ||
+        (await searchCoverDuckDuckGo(title));
     }
     if (url) {
       g.capa = url;

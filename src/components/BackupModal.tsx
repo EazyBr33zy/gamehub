@@ -157,7 +157,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({
 
   const handleConfirmObsidian = async (withCovers: boolean) => {
     if (!obsPreview) return;
-    const merged = mergeImported(games, obsPreview.imported);
+    const preview = obsPreview; // guarda antes de limpar o estado
+    const merged = mergeImported(games, preview.imported);
     setObsPreview(null);
     if (withCovers) {
       setAutoCoverBusy(true);
@@ -166,11 +167,11 @@ export const BackupModal: React.FC<BackupModalProps> = ({
           setImportStatus(`Buscando capas... ${d}/${t}`)
         );
         setImportStatus(
-          `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados. Capas encontradas: ${filled}.`
+          `Pronto! ${preview.novos} jogos novos e ${preview.atualizados} atualizados. Capas encontradas: ${filled}.`
         );
       } catch {
         setImportStatus(
-          `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados (a busca de capas falhou).`
+          `Pronto! ${preview.novos} jogos novos e ${preview.atualizados} atualizados (a busca de capas falhou).`
         );
       } finally {
         setAutoCoverBusy(false);
@@ -179,7 +180,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
     } else {
       onImportGames(merged);
       setImportStatus(
-        `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados a partir do Obsidian.`
+        `Pronto! ${preview.novos} jogos novos e ${preview.atualizados} atualizados a partir do Obsidian.`
       );
     }
   };
