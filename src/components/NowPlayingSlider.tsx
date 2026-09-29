@@ -23,6 +23,13 @@ const lastActivityKey = (g: Game): string => {
   return g.inicio ? `${g.inicio}T00:00` : '';
 };
 
+/** Minutos que faltam para bater a estimativa (Infinity se não houver estimativa) */
+const remainingMinutes = (g: Game): number => {
+  const estMin = (g.est || 0) * 60;
+  if (estMin <= 0) return Infinity;
+  return Math.max(0, estMin - (g.tempo || 0));
+};
+
 const AUTOPLAY_MS = 6000;
 
 export const NowPlayingSlider: React.FC<NowPlayingSliderProps> = ({
