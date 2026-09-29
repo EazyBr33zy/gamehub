@@ -1,5 +1,2 @@
-# Build artifacts
-dist/
-
-# Compressed archives
+#Compressed files
 *.tar.gz
