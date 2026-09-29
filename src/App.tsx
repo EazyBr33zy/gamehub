@@ -372,6 +372,8 @@ export default function App() {
         {activeTab === 'wrap' && (
           <WrapUpView
             games={games}
+            config={config}
+            onUpdateConfig={handleUpdateConfig}
             onSelectGame={handleSelectGameForEdit}
           />
         )}

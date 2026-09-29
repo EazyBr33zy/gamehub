@@ -79,6 +79,14 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
   const destaque = jogando[0];
   const outros = jogando.slice(1);
 
+  /** Paleta de cores por jogo em andamento (para dar mais cor ao layout) */
+  const ACCENTS = ['#22d3ee', '#c084fc', '#fb923c', '#34d399', '#f472b6', '#fbbf24', '#60a5fa', '#f87171', '#a3e635', '#2dd4bf'];
+  const accentOf = (g: Game, idx: number) => {
+    let h = 0;
+    for (const c of g.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return ACCENTS[h % ACCENTS.length] || ACCENTS[idx % ACCENTS.length];
+  };
+
   const FILTROS: { id: Filtro; label: string }[] = [
     { id: 'todos', label: `Todos (${jogandoBase.length})` },
     { id: 'recentes', label: 'Mais recentes' },
@@ -88,8 +96,8 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-2.5">
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-950/60 via-slate-900 to-fuchsia-950/40 px-4 py-2.5">
+        <div className="flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-cyan-400" />
           <h1 className="font-display text-base sm:text-lg font-bold text-white">
             {jogandoBase.length} {jogandoBase.length === 1 ? 'jogo em andamento' : 'jogos em andamento'}
@@ -97,7 +105,7 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
         </div>
         <button
           onClick={onOpenAddModal}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 hover:text-cyan-300"
+          className="inline-flex items-center gap-1 rounded-lg bg-cyan-400/10 px-2.5 py-1 text-xs font-semibold text-cyan-300 ring-1 ring-cyan-400/40 hover:bg-cyan-400/20"
         >
           <Plus className="h-4 w-4" />
           <span>Adicionar</span>
@@ -134,8 +142,16 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
             const faltam = estMin > 0 ? Math.max(0, estMin - (destaque.tempo || 0)) : null;
             const dias = destaque.inicio ? daysSince(destaque.inicio) + 1 : 0;
             const ritmo = dias > 0 && destaque.tempo > 0 ? Math.round(destaque.tempo / dias) : null;
+            const ac = accentOf(destaque, 0);
             return (
-              <section className="rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5">
+              <section
+                className="relative overflow-hidden rounded-3xl border p-4 sm:p-5"
+                style={{
+                  borderColor: ac + '55',
+                  background: `linear-gradient(150deg, ${ac}2e 0%, #0c0f1a 55%, #0a0d16 100%)`,
+                }}
+              >
+                <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${ac}, transparent)` }} />
                 <div className="flex gap-4">
                   <div onClick={() => onSelectGame(destaque)} className="w-28 sm:w-32 shrink-0 cursor-pointer">
                     <GameCover
@@ -147,8 +163,8 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                      {destaque.status === 'pausado' ? 'Pausado' : 'Jogando agora'}
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ac }}>
+                      {destaque.status === 'pausado' ? '⏸ Pausado' : '🔥 Jogando agora'}
                     </p>
                     <h2
                       onClick={() => onSelectGame(destaque)}
@@ -157,10 +173,14 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                       {destaque.nome}
                     </h2>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase text-cyan-300">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase"
+                        style={{ color: getConsoleColor(destaque.console), background: getConsoleColor(destaque.console) + '1a', border: `1px solid ${getConsoleColor(destaque.console)}55` }}
+                      >
+                        <ConsoleIcon name={destaque.console} className="h-3 w-3" />
                         {destaque.console}
                       </span>
-                      <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300">
+                      <span className="rounded-md border border-slate-700/70 bg-slate-800/80 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300">
                         {destaque.genero}
                       </span>
                     </div>
@@ -171,9 +191,9 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                 </div>
 
                 {/* Tempo e progresso */}
-                <div className="mt-4 rounded-2xl border border-slate-800/80 bg-slate-950/70 p-4">
+                <div className="mt-4 rounded-2xl border bg-slate-950/70 p-4" style={{ borderColor: ac + '40' }}>
                   <div className="flex items-end justify-between gap-2">
-                    <p className="font-display text-3xl font-bold tabular-nums text-cyan-300">
+                    <p className="font-display text-3xl font-bold tabular-nums" style={{ color: ac }}>
                       {formatMinutes(destaque.tempo)}
                       {destaque.est ? (
                         <span className="ml-1.5 text-xs font-medium text-slate-500">/ ~{destaque.est}h estimadas</span>
@@ -184,14 +204,14 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                   {pct !== null && (
                     <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"
-                        style={{ width: `${pct}%` }}
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${ac}, #f0abfc)` }}
                       />
                     </div>
                   )}
                   <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-cyan-400" />
+                      <Clock className="h-3 w-3" style={{ color: ac }} />
                       {ritmo !== null ? `Ritmo: ~${formatMinutes(ritmo)} / dia` : 'Sem ritmo ainda'}
                     </span>
                     {faltam !== null && faltam > 0 && (
@@ -268,10 +288,20 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
               </div>
 
               <div className="space-y-3">
-                {outros.map((game) => {
+                {outros.map((game, idx) => {
                   const pct = percentOf(game);
+                  const ac = accentOf(game, idx + 1);
+                  const cc = getConsoleColor(game.console);
                   return (
-                    <div key={game.id} className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-3">
+                    <div
+                      key={game.id}
+                      className="rounded-2xl border p-3"
+                      style={{
+                        borderColor: ac + '40',
+                        background: `linear-gradient(120deg, ${ac}1c 0%, rgba(15,23,42,0.6) 60%)`,
+                        borderLeft: `3px solid ${ac}`,
+                      }}
+                    >
                       <div className="flex gap-3">
                         <div onClick={() => onSelectGame(game)} className="w-16 shrink-0 cursor-pointer">
                           <GameCover
@@ -283,9 +313,12 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase text-cyan-400">
-                            <span className="truncate">{game.console}</span>
-                            {game.status === 'pausado' && <span className="text-amber-400">Pausado</span>}
+                          <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase">
+                            <span className="inline-flex min-w-0 items-center gap-1 truncate" style={{ color: cc }}>
+                              <ConsoleIcon name={game.console} className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{game.console}</span>
+                            </span>
+                            {game.status === 'pausado' && <span className="text-amber-400">⏸ Pausado</span>}
                           </div>
                           <h3
                             onClick={() => onSelectGame(game)}
@@ -294,7 +327,7 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                             {game.nome}
                           </h3>
                           <div className="mt-1 flex items-baseline justify-between">
-                            <span className="font-display text-base font-bold tabular-nums text-white">
+                            <span className="font-display text-base font-bold tabular-nums" style={{ color: ac }}>
                               {formatMinutes(game.tempo)}
                             </span>
                             {pct !== null && <span className="text-xs font-bold text-fuchsia-300">{pct}%</span>}
@@ -302,8 +335,8 @@ export const PlayingView: React.FC<PlayingViewProps> = ({
                           {pct !== null && (
                             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500"
-                                style={{ width: `${pct}%` }}
+                                className="h-full rounded-full"
+                                style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${ac}, #f0abfc)` }}
                               />
                             </div>
                           )}

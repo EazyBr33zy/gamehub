@@ -38,7 +38,7 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
   onOpenAddModal,
 }) => {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [statusFilter, setStatusFilter] = useState<string>('backlog');
   const [consoleFilter, setConsoleFilter] = useState<string>('todos');
   const [genreFilter, setGenreFilter] = useState<string>('todos');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -59,8 +59,9 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
   const filteredGames = useMemo(() => {
     const q = search.trim().toLowerCase();
     return games.filter((g) => {
-      // A biblioteca mostra apenas jogos que quero jogar e zerados
-      if (g.status !== 'backlog' && g.status !== 'zerado') return false;
+      // Filtro de status: "Quero jogar" (backlog) ou "Zerados" — sem a opção combinada
+      if (statusFilter !== 'backlog' && statusFilter !== 'zerado') return false;
+      if (g.status !== statusFilter) return false;
       // Busca textual
       if (q) {
         const matchesName = g.nome.toLowerCase().includes(q);
@@ -70,10 +71,6 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
         if (!matchesName && !matchesConsole && !matchesGenre && !matchesYear) {
           return false;
         }
-      }
-      // Filtro de status
-      if (statusFilter !== 'todos' && g.status !== statusFilter) {
-        return false;
       }
       // Filtro de console
       if (consoleFilter !== 'todos' && g.console !== consoleFilter) {
@@ -246,9 +243,8 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full rounded-lg bg-slate-900/90 border border-slate-800 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-colors"
             >
-              <option value="todos">Status: Todos (Quero jogar + Zerados)</option>
-              <option value="backlog">Quero Jogar</option>
-              <option value="zerado">Zerados</option>
+              <option value="backlog">Status: Quero Jogar</option>
+              <option value="zerado">Status: Zerados</option>
             </select>
           </div>
 
@@ -307,7 +303,7 @@ export const BacklogView: React.FC<BacklogViewProps> = ({
           <Layers className="mx-auto h-10 w-10 text-slate-600 mb-3" />
           <h3 className="font-display text-base font-semibold text-white">Nenhum jogo encontrado</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            {search || statusFilter !== 'todos'
+            {search || consoleFilter !== 'todos' || genreFilter !== 'todos'
               ? 'Tente ajustar os filtros ou o termo de busca digitado.'
               : 'Seu catálogo está vazio. Adicione seu primeiro jogo para começar a rastrear!'}
           </p>
