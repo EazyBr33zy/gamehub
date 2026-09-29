@@ -18,6 +18,7 @@ import { SyncPanel } from './SyncPanel';
 import { SyncApi } from '../hooks/useServerSync';
 import { getLastBackup, markBackupDone } from '../utils/storage';
 import { ImportPreview, ObsidianFile, buildPreview, mergeImported } from '../utils/obsidian';
+import { fillMissingCovers } from '../utils/covers';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -152,13 +153,54 @@ export const BackupModal: React.FC<BackupModalProps> = ({
     }
   };
 
-  const handleConfirmObsidian = () => {
+  const [autoCoverBusy, setAutoCoverBusy] = useState(false);
+
+  const handleConfirmObsidian = async (withCovers: boolean) => {
     if (!obsPreview) return;
-    onImportGames(mergeImported(games, obsPreview.imported));
-    setImportStatus(
-      `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados a partir do Obsidian.`
-    );
+    const merged = mergeImported(games, obsPreview.imported);
     setObsPreview(null);
+    if (withCovers) {
+      setAutoCoverBusy(true);
+      try {
+        const filled = await fillMissingCovers(merged, (d, t) =>
+          setImportStatus(`Buscando capas... ${d}/${t}`)
+        );
+        setImportStatus(
+          `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados. Capas encontradas: ${filled}.`
+        );
+      } catch {
+        setImportStatus(
+          `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados (a busca de capas falhou).`
+        );
+      } finally {
+        setAutoCoverBusy(false);
+        onImportGames(merged);
+      }
+    } else {
+      onImportGames(merged);
+      setImportStatus(
+        `Pronto! ${obsPreview.novos} jogos novos e ${obsPreview.atualizados} atualizados a partir do Obsidian.`
+      );
+    }
+  };
+
+  /** Busca capas apenas nos jogos que ainda não têm imagem */
+  const handleFillCovers = async () => {
+    setAutoCoverBusy(true);
+    try {
+      const copy = games.map((g) => ({ ...g }));
+      const filled = await fillMissingCovers(copy, (d, t) =>
+        setImportStatus(`Buscando capas... ${d}/${t}`)
+      );
+      if (filled > 0) onImportGames(copy);
+      setImportStatus(
+        filled > 0
+          ? `Capas adicionadas em ${filled} jogo(s). Os demais ficaram com o card colorido padrão.`
+          : 'Nenhuma capa nova foi encontrada. Dica: informe uma chave RAWG abaixo para melhorar os resultados.'
+      );
+    } finally {
+      setAutoCoverBusy(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,6 +327,27 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             </label>
           </div>
 
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={handleFillCovers}
+              disabled={autoCoverBusy}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/40 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-900/40 disabled:opacity-50"
+            >
+              🖼️ {autoCoverBusy ? 'Buscando capas...' : 'Buscar capas dos jogos sem imagem'}
+            </button>
+            <input
+              type="password"
+              placeholder="Chave RAWG opcional (rawg.io) — melhora os resultados"
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-fuchsia-400 focus:outline-none"
+              onChange={(e) => {
+                try {
+                  if (e.target.value) localStorage.setItem('gamehub_rawg_key', e.target.value);
+                  else localStorage.removeItem('gamehub_rawg_key');
+                } catch {}
+              }}
+            />
+          </div>
+
           {obsLoading && <p className="mt-3 text-xs text-slate-400">Lendo as notas...</p>}
 
           {obsPreview && (
@@ -312,10 +375,17 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                       Cancelar
                     </button>
                     <button
-                      onClick={handleConfirmObsidian}
-                      className="flex-1 rounded-lg bg-fuchsia-400 py-2 font-bold text-slate-950 hover:bg-fuchsia-300"
+                      onClick={() => handleConfirmObsidian(false)}
+                      className="flex-1 rounded-lg bg-slate-700 py-2 font-bold text-white hover:bg-slate-600"
                     >
-                      Importar {obsPreview.imported.length} jogos
+                      Importar sem capas
+                    </button>
+                    <button
+                      onClick={() => handleConfirmObsidian(true)}
+                      disabled={autoCoverBusy}
+                      className="flex-1 rounded-lg bg-fuchsia-400 py-2 font-bold text-slate-950 hover:bg-fuchsia-300 disabled:opacity-50"
+                    >
+                      Importar {obsPreview.imported.length} jogos + capas
                     </button>
                   </div>
                 </>
