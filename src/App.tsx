@@ -1,436 +1,186 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import React, { Suspense } from 'react';
+import { GameProvider, useGame } from './context/GameContext';
+import { ToastProvider } from './context/ToastContext';
+import { useAuth } from './context/AuthContext';
+import { useHashRoute } from './hooks/useHashRoute';
+import { Navbar } from './components/Navbar';
+import { SkeletonView } from './components/SkeletonView';
+import { ObsidianImportModal } from './components/ObsidianImportModal';
+import { NewGameModal } from './components/NewGameModal';
+import { EditGameModal } from './components/EditGameModal';
+import { DuplicateWarningModal } from './components/DuplicateWarningModal';
+import { DuplicateReviewModal } from './components/DuplicateReviewModal';
+import { MigrationModal } from './components/MigrationModal';
+import { ToastContainer } from './components/ToastContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AlertCircle, Gamepad2, LogIn, Lock } from 'lucide-react';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Game, AppConfig, PlaySession } from './types';
-import { DEFAULT_GAMES } from './data/defaultGames';
-import {
-  loadGamesFromStorage,
-  saveGamesToStorage,
-  loadConfigFromStorage,
-  saveConfigToStorage,
-  getLastBackup,
-} from './utils/storage';
-import { Navbar, NavTab } from './components/Navbar';
-import { Dashboard } from './components/Dashboard';
+import { DashboardView } from './components/DashboardView';
 import { BacklogView } from './components/BacklogView';
-import { PlayingView } from './components/PlayingView';
+import { GameDetailView } from './components/GameDetailView';
 import { WrapUpView } from './components/WrapUpView';
-import { GameModal } from './components/GameModal';
-import { FinishGameModal } from './components/FinishGameModal';
-import { BackupModal } from './components/BackupModal';
-import { TimeAdjustModal } from './components/TimeAdjustModal';
-import { SyncConflictModal } from './components/SyncConflictModal';
-import { useServerSync } from './hooks/useServerSync';
 
-export default function App() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [config, setConfig] = useState<AppConfig>({
-    metaAnual: 24,
-    userName: 'Gamer',
-    anoSelecionado: new Date().getFullYear(),
-  });
-  const [activeTab, setActiveTab] = useState<NavTab>('inicio');
+const AppContent: React.FC = () => {
+  const { serverSyncStatus } = useGame();
+  const { currentUser, isAuthLoading, isOwner, authError, login } = useAuth();
+  const { tab } = useHashRoute();
+  const currentYear = new Date().getFullYear();
 
-  // Modals state
-  const [isGameModalOpen, setIsGameModalOpen] = useState(false);
-  const [editingGame, setEditingGame] = useState<Game | null>(null);
-
-  const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
-  const [finishingGame, setFinishingGame] = useState<Game | null>(null);
-
-  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
-  const [adjustingGame, setAdjustingGame] = useState<Game | null>(null);
-
-  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
-
-  const [ready, setReady] = useState(false);
-  const [localSave, setLocalSave] = useState<{ ok: boolean; at: number } | null>(null);
-  const [backupBannerHidden, setBackupBannerHidden] = useState(false);
-
-  // Sempre guarda a versão mais recente dos dados (o envio ao servidor lê daqui)
-  const gamesRef = useRef<Game[]>([]);
-  const configRef = useRef<AppConfig>(config);
-  gamesRef.current = games;
-  configRef.current = config;
-
-  // Carregar dados iniciais do localStorage
-  useEffect(() => {
-    const loadedGames = loadGamesFromStorage();
-    const loadedConfig = loadConfigFromStorage();
-    setGames(loadedGames);
-    setConfig(loadedConfig);
-    gamesRef.current = loadedGames;
-    configRef.current = loadedConfig;
-    setReady(true);
-    // Pede ao navegador para não apagar estes dados sozinho quando faltar espaço
-    navigator.storage?.persist?.().catch(() => {});
-  }, []);
-
-  // Dados vindos do servidor: substitui os locais sem reenviar
-  const applyRemote = (remoteGames: Game[], remoteConfig?: Partial<AppConfig>) => {
-    gamesRef.current = remoteGames;
-    setGames(remoteGames);
-    saveGamesToStorage(remoteGames);
-    if (remoteConfig && !Array.isArray(remoteConfig) && typeof remoteConfig === 'object') {
-      const merged = { ...configRef.current, ...remoteConfig, anoSelecionado: configRef.current.anoSelecionado };
-      configRef.current = merged;
-      setConfig(merged);
-      saveConfigToStorage(merged);
-    }
-    setLocalSave({ ok: true, at: Date.now() });
-  };
-
-  const sync = useServerSync({
-    ready,
-    getLatest: () => ({ games: gamesRef.current, config: configRef.current }),
-    applyRemote,
-  });
-
-  // Salvar no localStorage sempre que jogos mudarem
-  const updateGamesState = (newGames: Game[]) => {
-    setGames(newGames);
-    gamesRef.current = newGames;
-    const ok = saveGamesToStorage(newGames);
-    setLocalSave({ ok, at: Date.now() });
-    sync.notifyChange();
-    if (!ok) {
-      alert(
-        'Atenção: não foi possível salvar no navegador (espaço cheio ou navegação anônima). ' +
-          'Faça um Backup agora para não perder seus dados e, se possível, use links (URL) nas capas em vez de enviar imagens.'
-      );
-    }
-  };
-
-  // Salvar configurações
-  const handleUpdateConfig = (newConfigPartial: Partial<AppConfig>) => {
-    const updated = { ...config, ...newConfigPartial };
-    setConfig(updated);
-    configRef.current = updated;
-    saveConfigToStorage(updated);
-    sync.notifyChange();
-  };
-
-  // Manipuladores de Jogos
-  const handleOpenAddModal = () => {
-    setEditingGame(null);
-    setIsGameModalOpen(true);
-  };
-
-  const handleSelectGameForEdit = (game: Game) => {
-    setEditingGame(game);
-    setIsGameModalOpen(true);
-  };
-
-  const handleSaveGame = (savedGame: Game) => {
-    const exists = games.some((g) => g.id === savedGame.id);
-    let nextGames: Game[];
-    if (exists) {
-      nextGames = games.map((g) => (g.id === savedGame.id ? savedGame : g));
-    } else {
-      nextGames = [savedGame, ...games];
-    }
-    updateGamesState(nextGames);
-  };
-
-  const handleDeleteGame = (gameId: string): boolean => {
-    const game = games.find((g) => g.id === gameId);
-    if (!game) return false;
-    if (confirm(`Deseja remover "${game.nome}" da sua lista?`)) {
-      const nextGames = games.filter((g) => g.id !== gameId);
-      updateGamesState(nextGames);
-      return true;
-    }
-    return false;
-  };
-
-  // Ajuste manual do tempo de jogo
-  const handleOpenAdjustTime = (game: Game) => {
-    setAdjustingGame(game);
-    setIsAdjustModalOpen(true);
-  };
-
-  const handleApplySession = (gameId: string, session: PlaySession) => {
-    const nextGames = games.map((g) =>
-      g.id === gameId
-        ? {
-            ...g,
-            tempo: (g.tempo || 0) + session.minutos,
-            sessoes: [...(g.sessoes || []), session].sort((a, b) =>
-              (a.data + a.inicio).localeCompare(b.data + b.inicio)
-            ),
-            inicio: g.inicio || session.data,
-          }
-        : g
+  // Loading state while checking authentication
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-dvh bg-[#0d1117] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <Gamepad2 className="h-10 w-10 text-[#22d3ee] animate-pulse" aria-hidden="true" />
+          <span className="text-xs font-mono text-[#9aa4b2]">Carregando GameHub...</span>
+        </div>
+      </div>
     );
-    updateGamesState(nextGames);
-  };
-
-  const handleApplyTime = (gameId: string, newTotalMinutes: number) => {
-    const nextGames = games.map((g) =>
-      g.id === gameId ? { ...g, tempo: Math.max(0, Math.round(newTotalMinutes)) } : g
-    );
-    updateGamesState(nextGames);
-  };
-
-  const handleQuickAddTime = (gameId: string, minutes: number) => {
-    const nextGames = games.map((g) => {
-      if (g.id === gameId) {
-        return {
-          ...g,
-          tempo: (g.tempo || 0) + minutes,
-        };
-      }
-      return g;
-    });
-    updateGamesState(nextGames);
-  };
-
-  const handleQuickPlay = (game: Game) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const nextGames = games.map((g) => {
-      if (g.id === game.id) {
-        return {
-          ...g,
-          status: 'jogando' as const,
-          inicio: g.inicio || today,
-        };
-      }
-      return g;
-    });
-    updateGamesState(nextGames);
-    setActiveTab('jogando');
-  };
-
-  const handleOpenFinishModal = (game: Game) => {
-    setFinishingGame(game);
-    setIsFinishModalOpen(true);
-  };
-
-  const handleConfirmFinish = (
-    gameId: string,
-    fimDate: string,
-    nota: number | null,
-    totalMinutes: number,
-    review: string
-  ) => {
-    const nextGames = games.map((g) => {
-      if (g.id === gameId) {
-        return {
-          ...g,
-          status: 'zerado' as const,
-          fim: fimDate,
-          inicio: g.inicio || fimDate,
-          nota,
-          tempo: totalMinutes,
-          notasPessoais: review || g.notasPessoais,
-        };
-      }
-      return g;
-    });
-    updateGamesState(nextGames);
-  };
-
-  const handleUpdateGameStatus = (gameId: string, status: Game['status']) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const nextGames = games.map((g) => {
-      if (g.id === gameId) {
-        return {
-          ...g,
-          status,
-          inicio: status === 'jogando' && !g.inicio ? today : g.inicio,
-          fim: status === 'zerado' && !g.fim ? today : g.fim,
-        };
-      }
-      return g;
-    });
-    updateGamesState(nextGames);
-  };
-
-  const handleImportGames = (importedGames: Game[], importedConfig?: Partial<AppConfig>) => {
-    updateGamesState(importedGames);
-    if (importedConfig) {
-      handleUpdateConfig(importedConfig);
-    }
-  };
-
-  const handleResetToDefaults = () => {
-    updateGamesState(DEFAULT_GAMES);
-    handleUpdateConfig({ metaAnual: 24 });
-  };
-
-  // Indicador de "salvo" no topo
-  const hhmm = localSave
-    ? new Date(localSave.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    : '';
-  let saveLabel = 'Salvo neste aparelho';
-  let saveTone: 'ok' | 'info' | 'warn' | 'error' = 'ok';
-  if (localSave && !localSave.ok) {
-    saveLabel = 'NÃO SALVOU';
-    saveTone = 'error';
-  } else if (sync.settings) {
-    if (sync.status === 'ok') saveLabel = 'Salvo no servidor';
-    else if (sync.status === 'syncing' || sync.status === 'checking') {
-      saveLabel = 'Enviando...';
-      saveTone = 'info';
-    } else if (sync.status === 'conflict') {
-      saveLabel = 'Conflito de dados';
-      saveTone = 'warn';
-    } else {
-      saveLabel = 'Só neste aparelho';
-      saveTone = 'warn';
-    }
-  } else if (hhmm) {
-    saveLabel = `Salvo ${hhmm}`;
   }
 
-  const lastBackup = getLastBackup();
-  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 864e5) : null;
-  const showBackupBanner =
-    ready &&
-    !backupBannerHidden &&
-    games.length > 0 &&
-    !(sync.settings && sync.status === 'ok') &&
-    (daysSinceBackup === null || daysSinceBackup >= 7);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100">
-      {/* Top Navbar & Mobile Bottom Tab */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenAddModal={handleOpenAddModal}
-        onOpenBackupModal={() => setIsBackupModalOpen(true)}
-        saveLabel={saveLabel}
-        saveTone={saveTone}
-        onSaveInfoClick={() => (sync.status === 'conflict' ? sync.openConflict() : setIsBackupModalOpen(true))}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-7 pb-24 md:pb-12">
-        {showBackupBanner && (
-          <div className="mb-5 flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-amber-200">
-              {daysSinceBackup === null
-                ? 'Você ainda não fez nenhum backup. Seus jogos ficam só neste navegador.'
-                : `Faz ${daysSinceBackup} dias desde o seu último backup.`}{' '}
-              Faça um backup ou ative o salvamento no servidor.
-            </p>
-            <div className="flex shrink-0 items-center gap-3">
-              <button
-                onClick={() => setIsBackupModalOpen(true)}
-                className="rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-300"
-              >
-                Abrir backup
-              </button>
-              <button onClick={() => setBackupBannerHidden(true)} className="text-xs text-slate-500 hover:text-slate-300">
-                Agora não
-              </button>
+  // Private entrance screen: displayed when not authenticated or not owner
+  if (!currentUser || !isOwner) {
+    return (
+      <div className="min-h-dvh bg-[#0d1117] text-[#f0f6fc] flex flex-col items-center justify-center p-4 selection:bg-[#22d3ee]/30 selection:text-white">
+        <div className="w-full max-w-sm rounded-2xl border border-[#30363d] bg-[#161b22] p-6 sm:p-8 shadow-2xl text-center space-y-6">
+          {/* Logo GameHub */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#06b6d4]/15 border border-[#06b6d4]/35 text-[#06b6d4] shadow-lg">
+              <Gamepad2 className="h-9 w-9 text-[#22d3ee]" aria-hidden="true" />
+            </div>
+            <div>
+              <h1 className="font-heading text-2xl font-black tracking-wider text-white">
+                Game<span className="text-[#22d3ee]">Hub</span>
+              </h1>
+              <p className="text-xs text-[#9aa4b2] mt-0.5">Telemetria de Jogos & Backlog</p>
             </div>
           </div>
-        )}
-        {activeTab === 'inicio' && (
-          <Dashboard
-            games={games}
-            config={config}
-            onUpdateConfig={handleUpdateConfig}
-            onSelectGame={handleSelectGameForEdit}
-            onQuickAddTime={handleQuickAddTime}
-            onAdjustTime={handleOpenAdjustTime}
-            onQuickFinish={handleOpenFinishModal}
-            onOpenAddModal={handleOpenAddModal}
-                onChangeTab={(t) => setActiveTab(t as any)}
-          />
-        )}
 
-        {activeTab === 'backlog' && (
-          <BacklogView
-            games={games}
-            onSelectGame={handleSelectGameForEdit}
-            onQuickPlay={handleQuickPlay}
-            onQuickFinish={handleOpenFinishModal}
-            onDeleteGame={handleDeleteGame}
-            onOpenAddModal={handleOpenAddModal}
-            onOpenBackupModal={() => setIsBackupModalOpen(true)}
-          />
-        )}
+          {/* Texto "Acesso restrito" */}
+          <div className="rounded-xl border border-white/5 bg-black/40 p-3.5 space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9aa4b2]">
+              <Lock className="h-3.5 w-3.5 text-[#22d3ee]" aria-hidden="true" />
+              <span>Acesso restrito</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Acervo pessoal e privado de uso exclusivo do administrador.
+            </p>
+          </div>
 
-        {activeTab === 'jogando' && (
-          <PlayingView
-            games={games}
-            onSelectGame={handleSelectGameForEdit}
-            onQuickAddTime={handleQuickAddTime}
-            onQuickFinish={handleOpenFinishModal}
-            onUpdateGameStatus={handleUpdateGameStatus}
-            onAdjustTime={handleOpenAdjustTime}
-            onDeleteGame={handleDeleteGame}
-            onOpenAddModal={handleOpenAddModal}
-          />
-        )}
+          {/* Mensagem de conta sem acesso se usuário não for o dono */}
+          {authError && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 font-semibold flex items-center justify-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" aria-hidden="true" />
+              <span>{authError}</span>
+            </div>
+          )}
 
-        {activeTab === 'wrap' && (
-          <WrapUpView
-            games={games}
-            config={config}
-            onUpdateConfig={handleUpdateConfig}
-            onSelectGame={handleSelectGameForEdit}
-          />
-        )}
+          {/* Botão Entrar com Google */}
+          <button
+            type="button"
+            onClick={login}
+            className="w-full min-h-[44px] flex items-center justify-center gap-2.5 rounded-xl border border-[#22d3ee]/50 bg-[#22d3ee] hover:bg-[#06b6d4] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#0d1117] transition-all cursor-pointer shadow-lg active:scale-98 focus-visible:ring-2 focus-visible:ring-[#22d3ee] outline-none"
+          >
+            <LogIn className="h-4 w-4" aria-hidden="true" />
+            <span>Entrar com Google</span>
+          </button>
+        </div>
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  const getSyncStatusDisplay = () => {
+    switch (serverSyncStatus) {
+      case 'synced':
+        return {
+          dotColor: 'bg-[#10b981]',
+          textColor: 'text-[#10b981]',
+          label: 'Sincronizado',
+        };
+      case 'syncing':
+        return {
+          dotColor: 'bg-[#22d3ee] animate-ping',
+          textColor: 'text-[#22d3ee]',
+          label: 'Sincronizando...',
+        };
+      case 'offline':
+        return {
+          dotColor: 'bg-[#f59e0b]',
+          textColor: 'text-[#f59e0b]',
+          label: 'Offline (Cache local)',
+        };
+      case 'error':
+      default:
+        return {
+          dotColor: 'bg-[#f43f5e]',
+          textColor: 'text-[#f43f5e]',
+          label: 'Erro de sincronização',
+        };
+    }
+  };
+
+  const syncStatus = getSyncStatusDisplay();
+
+  return (
+    <div className="min-h-dvh bg-[#0d1117] text-[#f0f6fc] flex flex-col justify-between selection:bg-[#06b6d4]/30 selection:text-white">
+      <Navbar />
+
+      {/* Discret banner in case of sync error */}
+      {serverSyncStatus === 'error' && (
+        <div className="bg-red-500/15 border-b border-red-500/30 px-4 py-2.5 text-center text-xs text-red-300 flex items-center justify-center gap-2">
+          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" aria-hidden="true" />
+          <span>Não foi possível sincronizar com o servidor no momento. Exibindo dados em cache local.</span>
+        </div>
+      )}
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 pb-24 md:pb-8">
+        <Suspense fallback={<SkeletonView />}>
+          {tab === 'painel' && <DashboardView />}
+          {tab === 'backlog' && <BacklogView />}
+          {(tab === 'jogando' || tab === 'jogo') && <GameDetailView />}
+          {tab === 'wrapup' && <WrapUpView />}
+        </Suspense>
       </main>
 
-      {/* Clean quiet footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Game Hub · Gerenciador de Backlog & Tempo de Gameplay</span>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsBackupModalOpen(true)}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Backup & Exportar
-            </button>
+      {/* ── FOOTER STATUS BAR ── */}
+      <footer className="border-t border-[#30363d] bg-[#0d1117] px-4 py-3.5 pb-20 md:pb-3.5 text-xs text-[#9aa4b2] font-mono">
+        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 text-center sm:text-left">
+            <span className="font-heading font-black text-white tracking-wider">GAMEHUB</span>
+            <span aria-hidden="true">—</span>
+            <span>Filipe Aurélio © {currentYear}</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs">
+            <span className={`flex items-center gap-1.5 font-bold ${syncStatus.textColor}`}>
+              <span className={`h-2 w-2 rounded-full ${syncStatus.dotColor}`} aria-hidden="true"></span>
+              <span>{syncStatus.label}</span>
+            </span>
           </div>
         </div>
       </footer>
 
-      {/* Modals */}
-      <GameModal
-        isOpen={isGameModalOpen}
-        game={editingGame}
-        games={games}
-        onClose={() => setIsGameModalOpen(false)}
-        onSave={handleSaveGame}
-        onDelete={handleDeleteGame}
-      />
-
-      <TimeAdjustModal
-        isOpen={isAdjustModalOpen}
-        game={adjustingGame}
-        onClose={() => setIsAdjustModalOpen(false)}
-        onApply={handleApplyTime}
-        onApplySession={handleApplySession}
-      />
-
-      <FinishGameModal
-        isOpen={isFinishModalOpen}
-        game={finishingGame}
-        onClose={() => setIsFinishModalOpen(false)}
-        onConfirmFinish={handleConfirmFinish}
-      />
-
-      <BackupModal
-        isOpen={isBackupModalOpen}
-        onClose={() => setIsBackupModalOpen(false)}
-        games={games}
-        config={config}
-        onImportGames={handleImportGames}
-        onResetToDefaults={handleResetToDefaults}
-        sync={sync}
-      />
-
-      <SyncConflictModal sync={sync} localGames={games} />
+      {/* Global Modals & Notifications */}
+      <ObsidianImportModal />
+      <NewGameModal />
+      <EditGameModal />
+      <DuplicateWarningModal />
+      <DuplicateReviewModal />
+      <MigrationModal />
+      <ToastContainer />
     </div>
+  );
+};
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <GameProvider>
+          <AppContent />
+        </GameProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,103 +1,123 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { PlatformIcon } from './PlatformIcon';
+import { Gamepad2 } from 'lucide-react';
 
-// Paletas de gradientes temáticas para jogos
-const THEME_GRADIENTS: Record<string, string> = {
-  'Soulslike': 'from-amber-950 via-stone-900 to-black',
-  'RPG': 'from-indigo-950 via-purple-950 to-slate-950',
-  'JRPG': 'from-blue-950 via-indigo-900 to-slate-950',
-  'Aventura': 'from-emerald-950 via-teal-950 to-slate-950',
-  'Ação / Aventura': 'from-red-950 via-zinc-900 to-black',
-  'Metroidvania': 'from-cyan-950 via-slate-900 to-slate-950',
-  'Terror / Ação': 'from-rose-950 via-stone-950 to-black',
-  'Roguelike': 'from-orange-950 via-red-950 to-black',
-  'Plataforma': 'from-sky-950 via-blue-900 to-slate-950',
-  'Plataforma 3D': 'from-violet-950 via-indigo-900 to-slate-950',
-  'Estratégia': 'from-teal-950 via-emerald-950 to-stone-950',
-  'FPS': 'from-yellow-950 via-stone-900 to-black',
-  'Indie': 'from-fuchsia-950 via-pink-950 to-slate-950',
-};
-
-const DEFAULT_GRADIENT = 'from-slate-900 via-indigo-950 to-slate-950';
-
-interface GameCoverProps {
-  capa?: string;
-  nome: string;
-  genero?: string;
-  consoleName?: string;
+export interface GameCoverProps {
+  src?: string | null;
+  title: string;
+  consoleName?: string | null;
   className?: string;
-  aspect?: 'portrait' | 'square' | 'wide';
+  alt?: string;
+  size?: 'sm' | 'md' | 'lg' | 'hero' | 'card' | 'thumb';
+  priority?: boolean;
+  grayscale?: boolean;
+}
+
+// Helper to get initials from title (e.g., "Silent Hill 2" -> "SH2", "Hades" -> "HA")
+function getTitleInitials(title: string): string {
+  if (!title) return 'GH';
+  const clean = title.replace(/\.m[db]$/i, '').replace(/[^\w\s]/gi, '').trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return clean.slice(0, 2).toUpperCase() || 'GH';
+}
+
+// Optimize IGDB cover URLs based on display size
+export function optimizeCoverUrl(url: string | null | undefined, size: 'sm' | 'md' | 'lg' | 'hero' | 'card' | 'thumb'): string | null {
+  if (!url || typeof url !== 'string' || !url.trim()) return null;
+  let cleanUrl = url.trim();
+
+  // If it's the old hardcoded default placeholder co3i89, treat as null so neutral fallback is rendered
+  if (cleanUrl.includes('co3i89.jpg')) {
+    return null;
+  }
+
+  // IGDB URL optimization
+  if (cleanUrl.includes('images.igdb.com')) {
+    if (size === 'hero' || size === 'lg') {
+      cleanUrl = cleanUrl.replace(/t_[a-z0-9_]+/i, 't_cover_big_2x');
+    } else if (size === 'sm' || size === 'thumb') {
+      cleanUrl = cleanUrl.replace(/t_[a-z0-9_]+/i, 't_cover_small');
+    } else {
+      cleanUrl = cleanUrl.replace(/t_[a-z0-9_]+/i, 't_cover_big');
+    }
+  }
+
+  return cleanUrl;
 }
 
 export const GameCover: React.FC<GameCoverProps> = ({
-  capa,
-  nome,
-  genero,
+  src,
+  title,
   consoleName,
   className = '',
-  aspect = 'portrait',
+  alt,
+  size = 'md',
+  priority = false,
+  grayscale = false,
 }) => {
-  const [imgError, setImgError] = React.useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  const aspectClass =
-    aspect === 'portrait' ? 'aspect-[3/4]' : aspect === 'square' ? 'aspect-square' : 'aspect-video';
+  const optimizedSrc = optimizeCoverUrl(src, size);
+  const initials = getTitleInitials(title);
+  const accessibleAlt = alt || `Capa do jogo ${title}`;
 
-  const gradient = (genero && THEME_GRADIENTS[genero]) || DEFAULT_GRADIENT;
-
-  // Letra inicial e abreviação para fallback
-  const initials = nome
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase() || 'GH';
-
-  if (capa && !imgError) {
+  if (!optimizedSrc || hasError) {
     return (
-      <div className={`relative overflow-hidden rounded-lg bg-slate-900 ${aspectClass} ${className}`}>
-        <img
-          src={capa}
-          alt={nome}
-          referrerPolicy="no-referrer"
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={() => setImgError(true)}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60" />
+      <div 
+        className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-border bg-gradient-to-br from-surface to-surface-2 flex flex-col items-center justify-between p-3 select-none ${className}`}
+        aria-label={accessibleAlt}
+      >
+        <div className="w-full flex justify-end">
+          <span className="rounded bg-black/40 p-1 text-text-muted">
+            <PlatformIcon consoleName={consoleName} size={16} className="h-4 w-4 text-accent" />
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center justify-center my-auto text-center px-1">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-accent font-heading text-lg font-black tracking-wider shadow-inner">
+            {initials}
+          </div>
+          <span className="mt-2 text-xs font-bold text-text-muted line-clamp-2 px-1 text-center leading-tight">
+            {title}
+          </span>
+        </div>
+
+        <div className="w-full text-center">
+          <span className="text-xs uppercase font-mono font-bold text-text-muted/60 tracking-wider">
+            {consoleName || 'GameHub'}
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className={`relative flex flex-col justify-between overflow-hidden rounded-lg bg-gradient-to-br ${gradient} p-3.5 border border-slate-800/80 shadow-inner select-none ${aspectClass} ${className}`}
-    >
-      {/* Decorative cyber grid / glow behind */}
-      <div className="absolute -top-12 -right-12 h-28 w-28 rounded-full bg-cyan-500/10 blur-xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-indigo-500/15 blur-xl pointer-events-none" />
+    <div className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-border bg-surface ${grayscale ? 'grayscale contrast-125 opacity-75' : ''} ${className}`}>
+      {/* Skeleton while image is loading */}
+      {!isLoaded && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-surface to-surface-2 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
+            <Gamepad2 className="h-4 w-4 text-text-muted animate-pulse" aria-hidden="true" />
+          </div>
+        </div>
+      )}
 
-      {/* Top badges */}
-      <div className="relative z-10 flex items-center justify-between text-[11px] font-semibold text-slate-400">
-        <span className="font-mono text-cyan-400/90 truncate max-w-[80px]">
-          {consoleName || 'GAME'}
-        </span>
-        <span className="text-[10px] text-slate-500 uppercase tracking-wider">
-          {genero ? genero.slice(0, 10) : ''}
-        </span>
-      </div>
-
-      {/* Middle iconic monogram */}
-      <div className="relative z-10 flex flex-1 items-center justify-center my-1">
-        <span className="font-display text-2xl font-bold tracking-tight text-white/30 group-hover:text-cyan-400/60 transition-colors">
-          {initials}
-        </span>
-      </div>
-
-      {/* Bottom title preview */}
-      <div className="relative z-10">
-        <p className="line-clamp-2 text-xs font-semibold text-slate-200 leading-snug">
-          {nome}
-        </p>
-      </div>
+      <img
+        src={optimizedSrc}
+        alt={accessibleAlt}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${grayscale ? 'grayscale' : ''} ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
     </div>
   );
 };

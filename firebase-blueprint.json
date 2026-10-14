@@ -1,0 +1,210 @@
+{
+  "entities": {
+    "game": {
+      "title": "Game",
+      "description": "A game item stored in the user's backlog or completed library.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the game."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this game record."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the game.",
+          "maxLength": 200
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Obsidian markdown file name.",
+          "maxLength": 255
+        },
+        "status": {
+          "type": "string",
+          "description": "Current lifecycle status of the game.",
+          "enum": ["jogando", "fila", "pausado", "wishlist", "zerado", "abandonado"]
+        },
+        "console": {
+          "type": "string",
+          "description": "Platform or console where the game is played.",
+          "maxLength": 100
+        },
+        "genero": {
+          "type": "string",
+          "description": "Genre classification.",
+          "maxLength": 100
+        },
+        "nota": {
+          "type": "number",
+          "description": "Personal rating from 0 to 10."
+        },
+        "capa": {
+          "type": "string",
+          "description": "Cover art image URL.",
+          "maxLength": 1000
+        },
+        "tempo": {
+          "type": "string",
+          "description": "Total time logged in format HH:mm or Xh.",
+          "maxLength": 50
+        },
+        "tempoMinutos": {
+          "type": "number",
+          "description": "Total play time in minutes."
+        },
+        "prioridade": {
+          "type": "boolean",
+          "description": "Whether the game is high priority (Próximos Jogos)."
+        },
+        "prioridadeEm": {
+          "type": "number",
+          "description": "Timestamp when the game was marked as high priority."
+        },
+        "ano_zerado": {
+          "type": "number",
+          "description": "Year when the game was completed."
+        },
+        "hltb": {
+          "type": "string",
+          "description": "HowLongToBeat estimated time.",
+          "maxLength": 50
+        },
+        "data_inicio": {
+          "type": "string",
+          "description": "Start date in format YYYY-MM-DD or DD/MM/YYYY.",
+          "maxLength": 30
+        },
+        "data_zerado": {
+          "type": "string",
+          "description": "Completion date in format YYYY-MM-DD or DD/MM/YYYY.",
+          "maxLength": 30
+        },
+        "got_jogo": {
+          "type": "boolean",
+          "description": "Game of the year winner."
+        },
+        "got_gameplay": {
+          "type": "boolean",
+          "description": "Best gameplay award."
+        },
+        "got_narrativa": {
+          "type": "boolean",
+          "description": "Best narrative award."
+        },
+        "got_arte": {
+          "type": "boolean",
+          "description": "Best art direction award."
+        },
+        "got_indie": {
+          "type": "boolean",
+          "description": "Best indie award."
+        },
+        "got_surpresa": {
+          "type": "boolean",
+          "description": "Surprise of the year award."
+        },
+        "got_retro": {
+          "type": "boolean",
+          "description": "Best retro award."
+        },
+        "got_dificil": {
+          "type": "boolean",
+          "description": "Most difficult award."
+        },
+        "got_pior": {
+          "type": "boolean",
+          "description": "Worst game award."
+        },
+        "anotacoes": {
+          "type": "string",
+          "description": "Notes, boss logs, or combos.",
+          "maxLength": 10000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this record was last modified."
+        }
+      },
+      "required": ["userId", "title", "status", "console"]
+    },
+    "user_profile": {
+      "title": "UserProfile",
+      "description": "User profile metadata.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address.",
+          "maxLength": 255
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name.",
+          "maxLength": 100
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL.",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp."
+        }
+      },
+      "required": ["userId"]
+    },
+    "site_settings": {
+      "title": "SiteSettings",
+      "description": "Global application configuration like annual completion goals.",
+      "type": "object",
+      "properties": {
+        "metaZerados": {
+          "type": "number",
+          "description": "Annual completion target."
+        },
+        "metaPorAno": {
+          "type": "object",
+          "description": "Map of year to target."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp."
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/games/{gameId}": {
+      "schema": "#/entities/game",
+      "description": "Acervo privado de jogos sincronizado em tempo real. Leitura e escrita exclusivas do dono (OWNER_UID)."
+    },
+    "/settings/{docId}": {
+      "schema": "#/entities/site_settings",
+      "description": "Configurações do site pessoal (metas anuais). Leitura e escrita exclusivas do dono (OWNER_UID)."
+    },
+    "/users/{userId}": {
+      "schema": "#/entities/user_profile",
+      "description": "Perfil de usuário. Leitura e escrita exclusivas do dono (OWNER_UID)."
+    },
+    "/users/{userId}/games/{gameId}": {
+      "schema": "#/entities/game",
+      "description": "Jogos individuais no acervo. Leitura e escrita exclusivas do dono (OWNER_UID)."
+    }
+  }
+}
