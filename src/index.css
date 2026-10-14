@@ -1,84 +1,1471 @@
 @import "tailwindcss";
 
-:root {
-  --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+@theme {
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-2: #21262d;
+  --color-border: #30363d;
+  --color-text: #f0f6fc;
+  --color-text-muted: #9aa4b2;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-accent-active: #06b6d4;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+  --color-purple: #a855f7;
+  --color-gold: #ffd700;
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Rajdhani', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --text-micro: 0.75rem;
+  --text-sub: 0.8125rem;
 }
 
-body {
-  font-family: var(--font-body);
-  background-color: #0b0f19;
-  color: #f1f5f9;
-  -webkit-tap-highlight-color: transparent;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+@layer base {
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #21262d;
+    --border: #30363d;
+    --text: #f0f6fc;
+    --text-muted: #9aa4b2;
+    --accent: #22d3ee;
+    --accent-hover: #67e8f9;
+    --accent-active: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #f43f5e;
+    --purple: #a855f7;
+    --gold: #ffd700;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0d1117;
+    color: #f0f6fc;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
 }
 
-.font-display {
-  font-family: var(--font-display);
-}
-
-/* Custom dark scrollbar */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #0d1117;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #30363d;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #22d3ee;
 }
 
-/* Safe area utilities for mobile devices */
-.pb-safe {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+/* Subtle glow for large titles and featured cards only */
+.glow-accent {
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.25);
+}
+.text-glow-accent {
+  text-shadow: 0 0 16px rgba(34, 211, 238, 0.45);
+}
+.text-glow-gold {
+  text-shadow: 0 0 16px rgba(255, 215, 0, 0.5);
+}
+.text-glow-cyan {
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.45);
 }
 
-/* =========================================================================
-   PALETA OBSIDIAN (roxo/azul escuro) — usada em cards, seções e destaques
-   ========================================================================= */
-.obs-card {
-  border-radius: 0.9rem;
-  border: 1px solid #302654;
-  background: linear-gradient(160deg, #171225 0%, #0f0c1d 100%);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+/* Hide horizontal scrollbar on tab strips (keeps scrollability) */
+.scrollbar-none {
+  scrollbar-width: none;
 }
-.obs-card-hover {
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
-.obs-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: #7c3aed;
-  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.18);
+
+/* ── TAREFAS H e I (DESKTOP ≥1024px): ficha do jogo em destaque — capa 2:3 natural
+   (clamp(230px, 18vw, 270px), sem esticar), painel lateral 320–340px com altura = card
+   principal e rolagem interna, quadros de estatísticas em UMA linha de 4 iguais sem
+   corte de texto e linha de controles alinhada (campos/botões com a mesma altura).
+   Classes-âncora gd-* já presentes no JSX (não renomeadas). Regras antigas de
+   stretch da capa foram corrigidas NA ORIGEM (removidas), não empilhadas por cima.
+   Abaixo de 1024px nada aqui se aplica (mobile inalterado). */
+@media (min-width: 1024px) {
+  /* G1 — Grade ÚNICA da página do jogo em destaque, independente da origem da navegação
+     (#/jogando ou #/jogo/:id aberto pelo "Outros em andamento" do Painel):
+     card principal na coluna 1, painel lateral na coluna 2 (300–330px), ambos na linha 1. */
+  .gd-focus-grid.lg\:grid {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 330px) !important;
+    gap: 24px !important;                /* vence lg:gap-5 (20px) do JSX base */
+    align-items: stretch !important;
+  }
+  /* Posicionamento explícito NA ORIGEM (linha/coluna fixas para os dois caminhos). */
+  .gd-focus-grid > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: auto;                    /* era start — com stretch o card define a altura da linha */
+  }
+  .gd-focus-grid > aside {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* G2 — Capa: largura clamp(190px, 16vw, 230px) (reduzida para dar ≥150px a cada quadro
+     de estatística a 1305px). Sem height:100%, sem min-height, sem align-self:stretch:
+     a caixa NUNCA acompanha a altura do card. */
+  .gd-hero-grid {
+    grid-template-columns: clamp(190px, 16vw, 230px) minmax(0, 1fr) !important;
+    align-items: start;
+  }
+  /* G3 — Capa com proporção FIXA 264/374 (proporção das capas do IGDB), sem width/height
+     forçados que distorçam. A caixa define o recorte; GameCover usa object-cover + center top. */
+  .gd-hero-grid > div:first-child {
+    width: clamp(190px, 16vw, 230px); /* vence md:w-[260px] do JSX base (só no desktop) */
+    aspect-ratio: 264 / 374;          /* era 3/4 — corrigido NA ORIGEM (proporção IGDB) */
+    height: auto;
+    min-height: 0;
+    align-self: start;
+    overflow: hidden; /* mantém border-radius/borda e o recorte topo do object-cover */
+  }
+
+  /* J1 — Jogando agora: quadros de estatística do card em destaque
+     Alinha todos os 4 ao topo (justify-content: flex-start), mesmo padding 12px 14px e mesma altura */
+  .gd-stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+  .gd-stats-grid > * {
+    min-width: 0 !important;
+    padding: 12px 14px !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    box-sizing: border-box !important;
+  }
+  /* Rótulo superior: no topo, alinhado à esquerda, podendo quebrar em 2 linhas.
+     Altura de 2 linhas reservada (32px) nos 4 rótulos para alinhar os valores. */
+  .gd-stats-grid > * > div:first-child {
+    white-space: normal !important;      /* era nowrap — rótulo pode quebrar em 2 linhas */
+    font-size: 11px !important;          /* vence lg:text-[10.5px] do JSX base */
+    letter-spacing: 0.04em !important;   /* tracking pedido (era 0.02em) */
+    line-height: 16px !important;
+    min-height: 32px;                   /* 2 linhas reservadas → valores alinhados nos 4 quadros */
+    margin: 0 !important;
+    text-align: left !important;
+  }
+  /* Valores e texto secundário sem reticências */
+  .gd-stats-grid > * > div[class*="font-mono"] {
+    font-size: 17px !important;          /* valor 17px (era 16px) */
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    margin-top: 4px !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+  }
+  .gd-stats-grid > * > div:last-child:not([class*="font-mono"]) {
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    margin-top: 4px !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+  }
+
+  /* I — Linha de controles: grade 1.4fr / 1fr / 1fr / auto, itens alinhados pelo topo */
+  .gd-owner-row {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto !important;
+    align-items: start;
+    gap: 12px;
+  }
+  /* Rótulo em linha única (evita "TEMPO TOTAL" quebrar e empurrar o campo), altura fixa ~16px */
+  .gd-owner-controls label {
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 16px;
+    height: 16px;
+    margin-bottom: 6px !important; /* vence mb-1 (4px) do JSX base */
+  }
+  /* TODOS os campos e botões na mesma altura (48px), fonte 15px, mesmo radius, box-sizing */
+  .gd-owner-controls select,
+  .gd-owner-controls input[type="number"],
+  .gd-owner-controls input[type="text"],
+  .gd-owner-controls button,
+  .gd-owner-controls > div > span,
+  .gd-owner-controls [class*="min-h-[44px]"] {
+    height: 48px;
+    min-height: 48px;
+    box-sizing: border-box;
+    font-size: 15px !important; /* vence text-base/md:text-xs do JSX base */
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+  }
+  .gd-owner-controls > *:last-child {
+    width: max-content; /* coluna "auto" dimensionada pelo próprio grupo de botões */
+  }
+  .gd-actions-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .gd-actions-row button {
+    flex: none;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding-inline: 16px;
+  }
+
+  /* ── TAREFAS A1 a A6 (DESKTOP ≥1024px): MELHORIAS VISUAIS NA ABA PAINEL ── */
+
+  /* ── P4 (novo pedido): Cards à direita do perfil (Meta anual, Em andamento,
+     Acervo total, Tempo investido) — coluna com clamp(320px, 27%, 360px); o perfil
+     usa o restante. Corrige NA ORIGEM os utilitários lg:/xl:grid-cols-[...] do JSX. */
+  .dashboard-main-grid {
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 27%, 360px) !important;
+  }
+  /* ── A1: Cards KPI à direita do perfil ── */
+  .dashboard-stats-grid {
+    gap: 12px !important;
+    height: 100% !important;
+  }
+  .dashboard-stats-grid > div {
+    padding: 14px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  /* P4: cabeçalho de Meta/Andamento/Acervo — ícone 32px + gap mínimo 12px entre
+     título e valor; valor com flex-shrink:0 (sem reticências). */
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child > span.shrink-0 {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child > span.shrink-0 svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child > div.min-w-0 {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  /* Título 12px, UMA linha, sem ellipsis (nowrap + overflow visível dentro da coluna) */
+  .dashboard-stats-grid > div:not(:last-child) p:first-child {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    color: #c9d1d9 !important;
+    margin: 0 !important;
+  }
+  /* Subtexto 11px, pode quebrar em 2 linhas (era truncate → "2026 · faltam …") */
+  .dashboard-stats-grid > div:not(:last-child) p:last-child {
+    white-space: normal !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    color: #9aa4b2 !important;
+    margin: 0 !important;
+    padding-top: 2px !important;
+    display: block !important;
+  }
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child > div.shrink-0 {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+  }
+  .dashboard-stats-grid > div:not(:last-child) > div:first-child > div.shrink-0 div[class*="font-mono"] {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    color: #f0f6fc !important;
+    line-height: 1 !important;
+  }
+  .dashboard-stats-grid > div > div:last-child[aria-hidden="true"] {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* ── P3: Card "Tempo investido" (nada sobreposto, subtexto flexível, valor destacado) ── */
+  .dashboard-stats-grid > div:last-child {
+    padding: 14px 16px !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child > span.shrink-0 {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child > span.shrink-0 svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child > div.min-w-0 {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  .dashboard-stats-grid > div:last-child p:first-child {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    white-space: nowrap !important;
+    color: #c9d1d9 !important;
+    margin: 0 !important;
+  }
+  .dashboard-stats-grid > div:last-child p:last-child {
+    white-space: normal !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    color: #9aa4b2 !important;
+    margin: 0 !important;
+    padding-top: 2px !important;
+    display: block !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child > div.shrink-0 {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+  }
+  .dashboard-stats-grid > div:last-child > div:first-child > div.shrink-0 div[class*="font-mono"] {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    color: #f0f6fc !important;
+    line-height: 1 !important;
+  }
+
+  /* ── P1 (novo pedido): Bloco "Jogando agora" — capa do card em destaque e painel
+     "Outros em andamento". O card em destaque define a altura do bloco (min-height
+     300px a 1305px) e o painel fica com a MESMA altura via wrapper absoluto interno. */
+  section[aria-label="Jogando agora"] .lg\:col-span-8 {
+    min-height: 300px;               /* o card em destaque define a altura do bloco */
+    height: auto !important;         /* desfaz h-full que esticava além do conteúdo */
+    align-self: stretch !important;
+  }
+  /* Capa do destaque: caixa com proporção IGDB 264/374, largura clamp(170px,14.5vw,200px),
+     height:auto e align-self:start — NUNCA acompanha/é esticada pela altura do card.
+     (Corrige NA ORIGEM o md:w-60/max-w-[260px] do JSX e o aspect-[3/4] do GameCover.) */
+  section[aria-label="Jogando agora"] .lg\:col-span-8 .md\:w-60 {
+    width: clamp(170px, 14.5vw, 200px) !important; /* vence md:w-60 (240px) e max-w-[260px] */
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    align-self: start;
+    height: auto;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-8 .md\:w-60 > div:first-child {
+    aspect-ratio: 264 / 374;                      /* era 3/4 (GameCover) — regra 14 */
+    height: auto;
+    object-position: center top;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-8 .md\:w-60 > div:first-child img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 {
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 > div:first-child {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;      /* regra 14: sem space-between vertical */
+    padding: 14px 16px !important;
+  }
+  /* Cabeçalho fixo + lista rolável ocupando o restante da altura */
+  section[aria-label="Jogando agora"] .lg\:col-span-4 > div:first-child > div:first-child {
+    flex-shrink: 0 !important;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 > div:first-child > div:last-child {
+    flex: 1 1 0% !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+  }
+  /* Itens: padding 8px 10px, capa 40px, gap 8px entre itens (space-y-2 do JSX = 8px) */
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a {
+    padding: 8px 10px !important;                /* era 10px 12px */
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;                         /* era 12px */
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a > div:first-child {
+    width: 40px !important;                      /* capa 40px (era 42×58, aspect 2/3) */
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: auto !important;                     /* removida a altura fixa que esticava */
+    aspect-ratio: 264 / 374 !important;          /* proporção IGDB (regra 14) */
+    flex-shrink: 0 !important;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a > div:first-child img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a .font-heading {
+    font-size: 14px !important;                  /* nome 14px */
+    font-weight: 600 !important;
+  }
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a .font-mono,
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a div.text-xs,
+  section[aria-label="Jogando agora"] .lg\:col-span-4 a span {
+    font-size: 12px !important;                  /* plataforma/tempo/"% HLTB" 12px */
+  }
+
+  /* ── P2 (novo pedido): Calendário "Dias que joguei" e painel de resumo ──
+     Células COM sessão: min-height 112px; SEM sessão: min-height 64px.
+     aspect-ratio removido na origem (classe aspect-[3/4] do JSX neutralizada). */
+  .calendar-cell {
+    aspect-ratio: auto !important;   /* era 3/4 — removido (regra 9: corrigir na origem) */
+    min-height: 64px !important;     /* padrão: célula SEM sessão */
+    height: auto !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 8px !important;
+  }
+  /* Célula COM sessão = <button>; células sem sessão e pads = <div> */
+  button.calendar-cell {
+    min-height: 112px !important;
+  }
+  .calendar-cell.bg-\[\#0d1117\],
+  div.calendar-cell:not([aria-hidden="true"]) {
+    background-color: #0d1117 !important;
+  }
+  .calendar-cell > div:first-child img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center top;
+  }
+  /* Capa de fundo com gradiente (valores pedidos); texto acima via z-10 do JSX */
+  .calendar-cell > div:first-child > div:last-child {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(to bottom, rgba(10,14,20,.35) 0%, rgba(10,14,20,.65) 50%, rgba(10,14,20,.92) 100%) !important;
+  }
+  /* Número do dia: 11px, sem caixa (fundo/borda/padding zerados na origem) */
+  .calendar-cell > div:nth-child(2) > div:first-child {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+  /* Pílula "+1": 14×14px, fonte 9px — no topo, ao lado do número, sem sobreposição */
+  .calendar-cell > div:nth-child(2) > div:last-child {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    padding: 0 !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+  }
+  /* Base da célula com sessão: título (line-clamp 2) + pílula de tempo em coluna, gap 4px */
+  .calendar-cell > div:last-child {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .calendar-cell > div:last-child span {
+    font-size: 11px !important;      /* pílula de tempo 11px (era até 12px no desktop) */
+    line-height: 1.2 !important;
+  }
+  .calendar-cell .drop-shadow-\[0_1px_2px_rgba\(0\,0\,0\,0\.85\)\],
+  .calendar-cell div.line-clamp-2 {
+    font-size: 11px !important;      /* título 11px (era 12px) */
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85) !important;
+  }
+  /* Painel "Resumo de outubro": altura = conteúdo, empilhado no topo (sem space-between) */
+  section[aria-labelledby="play-days-calendar-heading"] .hidden.lg\:flex {
+    align-self: start !important;
+    height: auto !important;         /* desfaz o stretch à altura do calendário */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 16px !important;            /* substitui space-y-4 (16px) já equivalente */
+  }
+
+  /* ── P1: "Próximos jogos" (grade horizontal) ── */
+  section[aria-labelledby="upcoming-games-heading"] > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+    gap: 12px !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    position: relative !important;
+    padding: 12px !important;
+    min-height: 96px !important;
+    height: auto !important;
+    gap: 12px !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group > div:first-child {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    height: auto !important;
+    aspect-ratio: 2 / 3 !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 8px !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group > div:first-child img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group > div:nth-child(2) {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    padding-right: 28px !important;
+    gap: 6px !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group h3 {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    line-height: 1.3 !important;
+    color: #ffffff !important;
+  }
+  section[aria-labelledby="upcoming-games-heading"] a.group > div:last-child {
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 10 !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 4px 6px !important;
+  }
+
+  /* ── P3 (novo pedido): "Distribuição por plataforma" (donut e legenda) ──
+     Donut com largura FIXA de 180px; legenda na coluna ao lado; nada ultrapassa o card. */
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) {
+    display: grid !important;                    /* era flex row — agora grade explícita */
+    grid-template-columns: 180px minmax(0, 1fr) !important;
+    gap: 24px !important;                        /* era 28px */
+    align-items: center !important;
+    justify-content: normal !important;
+    min-width: 0 !important;
+  }
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:first-child {
+    width: 180px !important;                     /* donut fixo 180px (era 230px via sm:w/h) */
+    height: 180px !important;
+    margin-left: 0 !important;                   /* desfaz mx-auto da linha de grid */
+    margin-right: 0 !important;
+    min-width: 0 !important;
+  }
+  div:has(> svg[aria-label*="Gráfico de pizza"]) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child {
+    flex: none !important;                       /* coluna da grade (não flex) */
+    min-width: 0 !important;
+  }
+  /* Cada linha da legenda em 2 linhas: L1 = bolinha+nome | % (direita, nowrap);
+     L2 = "N jogos" + "Nh NNm" juntos (12px, gap 12px, cor secundária). */
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button {
+    display: grid !important;
+    grid-template-columns: 10px minmax(0, 1fr) auto !important; /* era 5 colunas que estouravam o card */
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    row-gap: 2px !important;
+    align-items: center !important;
+    padding: 8px 14px !important;
+    min-width: 0 !important;
+  }
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button > div:nth-child(1) > div:first-child {
+    display: contents !important;                /* bolinha e nome entram direto na grade */
+    min-width: 0 !important;
+  }
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button span.rounded-full {
+    width: 10px !important;
+    height: 10px !important;
+    grid-row: 1 !important;
+    grid-column: 1 !important;
+    justify-self: center !important;
+  }
+  /* Nome: linha 1, coluna 2 — pode quebrar (sem ellipsis cortando), nunca invade a % */
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button span.font-bold {
+    grid-row: 1 !important;
+    grid-column: 2 !important;
+    font-size: 13px !important;
+    white-space: normal !important;              /* era nowrap — evita texto fora do quadro */
+    overflow-wrap: anywhere;
+    min-width: 0 !important;
+  }
+  /* "%": linha 1, coluna 3, à direita, nowrap */
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button > div:nth-child(1) > span:last-child {
+    grid-row: 1 !important;
+    grid-column: 3 !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+    width: auto !important;                      /* desfaz w-[44px] fixo do JSX */
+    min-width: 0 !important;
+  }
+  /* Linha 2: "N jogos" + tempo juntos, 12px, gap 12px, cor secundária */
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button > div:nth-child(2) {
+    display: flex !important;
+    grid-row: 2 !important;
+    grid-column: 2 / -1 !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+  }
+  div:has(> div > svg[aria-label*="Gráfico de pizza"]) > div:last-child > button > div:nth-child(2) span {
+    font-size: 12px !important;                  /* eram 13px */
+    color: #9aa4b2 !important;                   /* cor secundária (inclusive o valor antes branco) */
+    white-space: nowrap !important;
+    text-align: left !important;
+  }
+
+  /* ── P6: Gráfico "Ritmo de zeramentos" ── */
+  .monthly-rhythm-card,
+  div.grid.grid-cols-1.lg\:grid-cols-2 > div:first-child:has(.grid-cols-12) {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100% !important;
+  }
+  .monthly-rhythm-body,
+  div.grid.grid-cols-1.lg\:grid-cols-2 > div:first-child:has(.grid-cols-12) > div:first-child {
+    flex: 1 1 0% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 0 !important;
+  }
+  .monthly-rhythm-bars,
+  div.grid.grid-cols-1.lg\:grid-cols-2 > div:first-child:has(.grid-cols-12) .grid-cols-12 {
+    flex: 1 1 0% !important;
+    min-height: 160px !important;
+    height: auto !important;
+    align-items: flex-end !important;
+  }
+
+  /* ── A6: Cabeçalho da seção "DIAS QUE JOGUEI" ── */
+  section[aria-labelledby="play-days-calendar-heading"] span:has(> #play-days-calendar-heading) {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    gap: 10px !important;
+  }
+  section[aria-labelledby="play-days-calendar-heading"] span:has(> #play-days-calendar-heading) > svg {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 6px !important;
+    box-sizing: border-box !important;
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    border-radius: 8px !important;
+    color: #c084fc !important;
+    flex-shrink: 0 !important;
+  }
+  #play-days-calendar-heading {
+    font-family: var(--font-heading) !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+  }
+
+  /* ── B1: Barra de filtros da aba Backlog (desktop) ── */
+  .backlog-filters-bar {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(160px, 200px)) !important;
+    gap: 12px !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .backlog-filters-bar > div:first-child {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .backlog-filters-bar input,
+  .backlog-filters-bar select {
+    height: 44px !important;
+    min-height: 44px !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* ── TAREFA B1 (DESKTOP ≥1024px): CARDS DE JOGO DA ABA BACKLOG ── */
+  /* Todos os cards da mesma linha com a mesma altura */
+  div:has(> [role="button"][aria-label^="Ver detalhes do jogo"]),
+  div:has(> button[aria-label^="Ver detalhes do jogo"]) {
+    align-items: stretch !important;
+  }
+  [role="button"][aria-label^="Ver detalhes do jogo"],
+  button[aria-label^="Ver detalhes do jogo"] {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+  [role="button"][aria-label^="Ver detalhes do jogo"] > div:first-child,
+  button[aria-label^="Ver detalhes do jogo"] > div:first-child {
+    aspect-ratio: 3 / 4 !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+  }
+  [role="button"][aria-label^="Ver detalhes do jogo"] > div:last-child,
+  button[aria-label^="Ver detalhes do jogo"] > div:last-child {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  /* Título 13px (peso 600, máx. 2 linhas) */
+  [role="button"][aria-label^="Ver detalhes do jogo"] h3,
+  button[aria-label^="Ver detalhes do jogo"] h3 {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Plataforma/gênero 12px */
+  [role="button"][aria-label^="Ver detalhes do jogo"] h3 + div,
+  button[aria-label^="Ver detalhes do jogo"] h3 + div {
+    font-size: 12px !important;
+  }
+
+  /* Horas 12px; quando forem "0h00", opacidade 0.5 (não ocultar) */
+  [role="button"][aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > span:first-child,
+  button[aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > span:first-child {
+    font-size: 12px !important;
+  }
+  [role="button"][aria-label^="Ver detalhes do jogo"] span[title*="0h00"],
+  button[aria-label^="Ver detalhes do jogo"] span[title*="0h00"] {
+    opacity: 0.5 !important;
+  }
+
+  /* Botões de ação (editar, .md, excluir): área clicável 32x32px, gap 8px */
+  [role="button"][aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > div:last-child,
+  button[aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  [role="button"][aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > div:last-child > button,
+  button[aria-label^="Ver detalhes do jogo"] > div:last-child > div:last-child > div:last-child > button {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #9aa4b2 !important;
+  }
+  /* Ícone de excluir usa a mesma cor dos outros e fica vermelho SÓ no hover */
+  [role="button"][aria-label^="Ver detalhes do jogo"] button[aria-label^="Excluir"]:hover,
+  [role="button"][aria-label^="Ver detalhes do jogo"] button[title^="Excluir"]:hover,
+  button[aria-label^="Ver detalhes do jogo"] button[aria-label^="Excluir"]:hover,
+  button[aria-label^="Ver detalhes do jogo"] button[title^="Excluir"]:hover {
+    color: #f87171 !important;
+  }
 }
-.obs-accent-bar {
+
+/* ── PROBLEMAS 3-5 (DESKTOP ≥1024px): correcoes pontuais de layout ── */
+@media (min-width: 1024px) {
+  /* ── PROBLEMA 3 — Painel "OUTROS EM ANDAMENTO" do Painel (aba #/painel) ──
+     A lista era distribuída com justify-between dentro da altura esticada do card,
+     espaçando os itens e cortando o 4º. Agora: topo fixo, gap uniforme de 8px e
+     rolagem interna limitada a ~4 itens completos (item ≈ 92px + barra HLTB). */
+  .dashboard-others-panel {
+    min-height: 0;
+  }
+  .dashboard-others-list {
+    justify-content: flex-start !important; /* vence justify-between do JSX base */
+    min-height: 0;
+    max-height: calc(4 * 92px + 3 * 8px);   /* 4 jogos completos; demais rolam */
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #161b22;
+  }
+
+  /* ── PROBLEMA 4 — "DIAS QUE JOGUEI" ──
+     Células com altura UNIFORME e compacta (70px), substituindo aspect-[3/4] NA ORIGEM
+     (só no desktop; mobile mantém a proporção atual). Título limitado a 2 linhas com
+     ellipsis. O painel RESUMO deixa de ser esticado: altura = conteúdo, empilhado no topo. */
+  .gd-calendar-grid {
+    align-items: start !important; /* vence items-stretch do JSX base (colunas pelo topo) */
+  }
+  .gd-calendar-days {
+    grid-auto-rows: auto;           /* P2: linhas acompanham o conteúdo (64px vazias / 112px c/ sessão) */
+    gap: 8px !important;
+  }
+  .gd-calendar-cell {
+    aspect-ratio: auto !important;  /* neutraliza aspect-[3/4] só no desktop */
+    height: auto;                   /* P2: removida a altura fixa de 70px (min-height manda) */
+  }
+  .gd-calendar-cell .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;               /* título nunca estoura a célula */
+  }
+  .gd-calendar-summary {
+    align-self: start;              /* sem esticar para a altura do calendário */
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #161b22;
+  }
+
+  /* ── PROBLEMA 5 — Legenda de "DISTRIBUIÇÃO POR PLATAFORMA" dentro do card ──
+     Coluna da legenda com min-width:0 (exigência p/ ellipsis funcionar em flex),
+     rosca um pouco menor e gap reduzido no desktop; colunas numéricas seguem com
+     largura fixa via classes existentes do JSX (shrink-0 / min-w-[34px]). */
+  .gd-platform-card > div:first-child {
+    min-width: 0;
+  }
+  /* Container do card: recorte para nada ultrapassar a borda (overflow:hidden já no JSX) */
+  .gd-platform-card {
+    overflow: hidden !important;
+  }
+  .gd-platform-card * {
+    min-width: 0;                                /* todos os filhos flex/grid podem encolher */
+  }
+  /* Linha rosca+legenda (flex-col lg:flex-row): reduz o gap no desktop */
+  .gd-platform-card .lg\:flex-row {
+    min-width: 0;
+    gap: 24px !important; /* iguala o gap pedido (grade donut|legenda) */
+  }
+  .gd-platform-legend {
+    min-width: 0;
+  }
+}
+
+/* Background subtle grid */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Dashboard hero ambient glows */
+.hero-glow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.hero-glow::before {
+  content: '';
   position: absolute;
-  inset: 0 auto auto 0;
-  height: 3px;
-  width: 100%;
-  border-radius: 3px 3px 0 0;
+  inset: -40%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(600px 300px at 8% -10%, rgba(34, 211, 238, 0.16), transparent 60%),
+    radial-gradient(500px 280px at 95% 110%, rgba(168, 85, 247, 0.14), transparent 60%),
+    radial-gradient(380px 220px at 60% 40%, rgba(16, 185, 129, 0.06), transparent 65%);
 }
-.obs-title {
-  font-family: var(--font-display);
-  letter-spacing: 0.02em;
+
+/* Animated conic ring for the annual goal */
+@property --ring-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
-/* Cores de destaque no estilo Obsidian (para os cards de stats e ritmo) */
-.obs-purple  { --obs-c: #a78bfa; }
-.obs-blue    { --obs-c: #60a5fa; }
-.obs-teal    { --obs-c: #2dd4bf; }
-.obs-amber   { --obs-c: #fbbf24; }
-.obs-pink    { --obs-c: #f472b6; }
-.obs-red     { --obs-c: #fb7185; }
-.obs-green   { --obs-c: #34d399; }
-.obs-indigo  { --obs-c: #818cf8; }
-.obs-color {
-  color: var(--obs-c);
+.goal-ring {
+  background: conic-gradient(
+    from var(--ring-angle),
+    #22d3ee calc(var(--goal-percent) * 1%),
+    #21262d 0
+  );
+  animation: ring-spin 12s linear infinite;
 }
-.obs-bg-soft {
-  background: color-mix(in srgb, var(--obs-c) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--obs-c) 35%, transparent);
+@keyframes ring-spin {
+  to { --ring-angle: 360deg; }
+}
+
+/* Soft entrance animation for dashboard sections */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Accessibility: Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse, .animate-ping, .animate-spin {
+    animation: none !important;
+  }
+}
+
+/* ── GameDetailView (página do jogo em andamento) — escala única no mobile (≤768px).
+   Tarefas B/C/D: somente CSS; desktop (>768px) permanece exatamente como está. */
+@media (max-width: 768px) {
+  /* B: oculta a faixa "JOGANDO AGORA (N)" com os chips e remove o espaço que ela ocupava,
+     para "Voltar ao Acervo" subir ao topo do conteúdo. Troca de jogo segue possível pelo
+     painel "Outros em andamento" abaixo do card. */
+  .gd-page > .gd-playing-strip {
+    display: none;
+  }
+
+  /* C: gap vertical uniforme de 12px entre todos os blocos da página
+     (Tailwind space-y usa margin-top nos filhos — sobrescrito aqui só no mobile).
+     O bloco oculto da faixa "JOGANDO AGORA" é ignorado para o primeiro bloco visível
+     ("Voltar ao Acervo") não herdar margem residual. */
+  .gd-page > :not(.gd-playing-strip) + *,
+  .gd-page .space-y-5 > * + * {
+    margin-top: 12px;
+  }
+
+  /* B: zera também o mb do cabeçalho interno da faixa oculta (espaço residual, se a
+     regra acima vier a ser substituída por gap em utilidades futuras). */
+  .gd-playing-strip .gd-strip-head {
+    margin-bottom: 0;
+  }
+
+  /* G6 (aba #/jogando): corpo (abas + conteúdo) com o mesmo gap de 12px dos demais blocos */
+  .gd-body.space-y-5 > * + * {
+    margin-top: 12px;
+  }
+
+  /* C: padding interno dos cards/blocos = 14px, igual em todos */
+  .gd-page .gd-panel,
+  .gd-page .gd-owner-controls,
+  .gd-page .gd-session-form {
+    padding: 14px;
+  }
+
+  /* C: rótulos padronizados (TEMPO REGISTRADO, NOTA, STATUS, NOTA (0–10), TEMPO TOTAL,
+     AÇÕES, DATA, HORA INÍCIO, HORA TÉRMINO etc.) — 11px, maiúsculas, mesmo letter-spacing */
+  .gd-page label[class*="uppercase"] {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  /* C: valores principais dos quadros de estatísticas (12h52, 6, 04/04/2026…) = 18px.
+     !important para vencer text-lg/fontes utilitárias do JSX (não alterado). */
+  .gd-page [class*="min-h-[76px]"] > div[class*="font-mono"] {
+    font-size: 18px !important;
+  }
+
+  /* C: rótulos dos próprios quadros ("TEMPO REGISTRADO", "SESSÕES" etc.) = 11px */
+  .gd-page [class*="min-h-[76px]"] > div:first-child {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  /* A (mobile): título do destaque na escala mobile — capa ≤200px + título abaixo sem rolar */
+  .gd-page h1[style] {
+    font-size: clamp(1.5rem, 7vw, 1.875rem) !important;
+  }
+
+  /* C+D4: campos e botões com altura única de 44px, fonte ~15px e mesmo border-radius.
+     "Jogando"/"12:52" hoje usavam text-base (16px) no mobile → reduzidos ao padrão.
+     !important para vencer as utilidades Tailwind aplicadas no JSX (não alterado). */
+  .gd-page .gd-owner-controls select,
+  .gd-page .gd-owner-controls input[type="number"],
+  .gd-page .gd-owner-controls input[type="text"],
+  .gd-page .gd-owner-controls button,
+  .gd-page .gd-session-form input[type="text"],
+  .gd-page .gd-session-form button[type="submit"] {
+    min-height: 44px;
+    height: auto !important;   /* desfaz a altura fixa de 48px da linha de controles do desktop (TAREFA I) */
+    font-size: 15px !important;
+    border-radius: 8px;
+  }
+
+  /* D3: formulário de sessão — DATA na linha inteira; HORA INÍCIO / HORA TÉRMINO lado a
+     lado em duas colunas iguais; "Salvar Sessão" em largura total */
+  .gd-session-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gd-session-grid > div:first-child,
+  .gd-session-grid > button[type="submit"] {
+    grid-column: 1 / -1;
+  }
+
+  /* D1: "PROGRESSO DA CAMPANHA (HLTB)" e "N% CONCLUÍDO" cada um em UMA linha */
+  .gd-hltb .uppercase {
+    white-space: nowrap;
+  }
+
+  /* D2: título "Histórico…" cabe melhor; ícone alinhado; contador logo abaixo, à esquerda */
+  .gd-hist-title {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .gd-hist-title h2 {
+    font-size: 1rem;
+  }
+  .gd-hist-title + span {
+    text-align: left;
+  }
+
+  /* D5: abas com altura, fonte e padding uniformes (rolagem horizontal mantida) */
+  .gd-tabs [role="tab"] {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  /* ── TAREFA F (MOBILE): "RECÉM ZERADOS" mostra somente os 4 mais recentes.
+     A ordenação já é do mais recente p/ o mais antigo (getRecentBeatenGames); as duas
+     colunas são <li> irmãos consecutivos — nth-of-type(n+2) oculta a 2ª coluna (itens 5–8).
+     Nenhum dado removido do DOM/código; desktop (>768px) permanece com os 8 itens. */
+  .recent-beaten-section ul[role="list"] > li:nth-of-type(n+2) {
+    display: none;
+  }
+
+  /* ── TAREFA G (MOBILE): Painel — ordem tags→perfil→botões→indicadores, meta em
+     largura total e indicadores em grade 2 colunas compactas. Somente CSS.
+     (TAREFA K: os cards de indicadores foram REFEITOS do zero mais abaixo — as regras
+     antigas de "card dentro de card" do hero/perfil foram removidas daqui.) */
+
+  /* G3: tags ("CICLO 2026" / "N JOGOS REGISTRADOS") um pouco menores e centralizadas */
+  .dashboard-topbar > div:first-child {
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  /* G3: ordem = tags → perfil+favoritos → botões ("Novo jogo"/"Explorar acervo" lado a
+     lado, larguras iguais, 44px) → indicadores. Nada foi movido no HTML: só order flex. */
+  .dashboard-main-grid {
+    margin-top: 12px; /* gap vertical padrão da escala mobile */
+  }
+  .dashboard-actions {
+    order: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .dashboard-actions > button,
+  .dashboard-actions > a {
+    flex: none;
+    width: 100%;
+    min-height: 44px;
+    padding-left: 0;
+    padding-right: 0;
+    justify-self: stretch;
+  }
+  .dashboard-profile-card {
+    order: 2;
+  }
+  .dashboard-stats-grid {
+    order: 3;
+  }
+
+  /* ── TAREFA K (MOBILE): REFESTA dos 4 cards de indicador + bloco do perfil.
+     As regras anteriores (position:absolute na linha de acento, margens negativas,
+     remapeamento de grid-area por célula) foram REMOVIDAS; layout reescrito do zero
+     com grid-template-areas. O único position:absolute que resta é a linha ::after,
+     expressamente especificada no padrão. Desktop (>768px) intocado. */
+
+  /* K-BLOCO PERFIL: devolve o aspecto de card (borda 1px, radius, fundo e padding 16px
+     dos demais cards do Painel). Avatar, textos e favoritos permanecem como estão. */
+  .dashboard-profile-card {
+    border: 1px solid #30363d;
+    background: rgba(13, 17, 23, 0.6);
+    padding: 16px;
+    border-radius: 16px; /* rounded-2xl — mesmo raio dos cards */
+  }
+
+  /* K-PADRÃO DOS 4 CARDS: posição relativa (âncora do ::after), recorte do acento nos
+     cantos arredondados, box-sizing, padding 14px e min-width 0. */
+  .dashboard-stats-grid > * {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 14px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border-radius: 12px; /* rounded-xl — igual aos demais cards da página */
+  }
+  /* K-LINHA COLORIDA: UMA só, via ::after do card, totalmente dentro dele (o
+     overflow:hidden acima faz a linha seguir o arredondamento). O <div> de acento do
+     StatCard deixa de renderizar (K1–K4). */
+  .dashboard-stats-grid > *::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: currentColor; /* cor do acento herdada do wrapper do StatCard */
+    opacity: 0.4;             /* mesma intensidade da linha atual */
+  }
+  /* Acento por card (mesmas cores do tema, sem trocar paleta) */
+  .dashboard-stats-grid > *:first-child { color: #22d3ee; } /* META ANUAL — ciano */
+  .dashboard-stats-grid > *:nth-child(2) { color: #a855f7; } /* EM ANDAMENTO — roxo */
+  .dashboard-stats-grid > *:nth-child(3) { color: #38bdf8; } /* ACERVO TOTAL — azul */
+  .dashboard-stats-grid > *:last-child   { color: #fbbf24; } /* TEMPO INVESTIDO — âmbar */
+  /* Remove qualquer outra implementação da linha (o <div> de acento do JSX) */
+  .dashboard-stats-grid > * > div:last-child {
+    display: none;
+  }
+
+  /* K-GRADE: meta (1º) e tempo investido (último) em largura total; "Em andamento" e
+     "Acervo total" em 2 colunas iguais com a MESMA altura (align-items:stretch da grade
+     + linha 1fr do grid interno de cada card). */
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .dashboard-stats-grid > *:first-child,
+  .dashboard-stats-grid > *:last-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Cabeçalho do StatCard: passa a ser o próprio grid do card (áreas do layout K),
+     sem posicionar nada por célula individual. */
+  .dashboard-stats-grid > * > div:first-child {
+    display: grid;
+    column-gap: 10px;
+    row-gap: 6px;
+    align-items: center;
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-areas:
+      "icon  title"
+      "value value"
+      "sub   sub";
+    grid-template-rows: auto auto 1fr;
+  }
+  .dashboard-stats-grid > * > div:first-child > span.shrink-0 {
+    grid-area: icon;
+    height: 32px;
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .dashboard-stats-grid > * > div:first-child > span.shrink-0 > * {
+    height: 20px;
+    width: 20px;
+  }
+  .dashboard-stats-grid > * > div:first-child > div.min-w-0 {
+    grid-area: title;
+    min-width: 0;
+  }
+  .dashboard-stats-grid > * > div:first-child > div.shrink-0 {
+    grid-area: value;
+    justify-self: start;
+    display: block;
+    width: auto;
+  }
+  /* Valor principal ~26px (número); sufixos "/60", "h"/"min" ficam esmaecidos/menores */
+  .dashboard-stats-grid > * > div:first-child > div.shrink-0 > div[class*="font-mono"] {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 26px;
+    line-height: 1.1;
+  }
+  .dashboard-stats-grid > * > div:first-child > div.shrink-0 > div[class*="font-mono"] > span {
+    font-size: 13px;
+  }
+  /* Rótulo: 12px, maiúsculas, peso 600, uma linha */
+  .dashboard-stats-grid > * > div:first-child > div.min-w-0 p:first-child {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* Subtexto: 11px, cor secundária, alinhado à ESQUERDA, pode quebrar em 2 linhas */
+  .dashboard-stats-grid > * > div:first-child > div.min-w-0 p:last-child {
+    font-size: 11px;
+    text-align: left;
+    white-space: normal;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+
+  /* K-CARD 1 — META ANUAL (largura total):
+     "icon title value" / "bar bar pct" */
+  .dashboard-stats-grid > *:first-child > div:first-child {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon  title  value"
+      "bar   bar    pct";
+    column-gap: 12px;
+    row-gap: 12px;
+  }
+  .dashboard-stats-grid > *:first-child > div:first-child > span.shrink-0 {
+    height: 40px;
+    width: 40px;
+  }
+  .dashboard-stats-grid > *:first-child > div:first-child > div.shrink-0 {
+    grid-area: value;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+  }
+  .dashboard-stats-grid > *:first-child > div:first-child > div.shrink-0 > div[class*="font-mono"] {
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
+    font-size: 26px;
+  }
+  /* Barra de progresso: linhas 2/3 viram áreas do grid do card (bar | pct) */
+  .dashboard-stats-grid > *:first-child > div:nth-child(2) {
+    grid-area: bar;
+    width: auto;
+    margin-top: 0;
+  }
+  .dashboard-stats-grid > *:first-child > div:nth-child(2) > div:first-child {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+  .dashboard-stats-grid > *:first-child > div:nth-child(2) > span {
+    grid-area: pct;
+    width: auto;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  /* K-CARD 4 — TEMPO INVESTIDO (largura total, linha compacta): ícone 40px +
+     título/subtítulo à esquerda; valor à direita. */
+  .dashboard-stats-grid > *:last-child > div:first-child {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon title value";
+    grid-template-rows: auto;
+    column-gap: 12px;
+    align-items: center;
+  }
+  .dashboard-stats-grid > *:last-child > div:first-child > span.shrink-0 {
+    height: 40px;
+    width: 40px;
+  }
+  .dashboard-stats-grid > *:last-child > div:first-child > div.shrink-0 {
+    grid-area: value;
+    justify-self: end;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    width: auto;
+    white-space: nowrap;
+  }
+  .dashboard-stats-grid > *:last-child > div:first-child > div.shrink-0 > div[class*="font-mono"] {
+    font-size: 26px;
+    white-space: nowrap;
+  }
+  .dashboard-stats-grid > *:last-child > div:first-child > div.min-w-0 p:last-child {
+    font-size: 12px;
+  }
+
+  /* K-GAP: 12px entre todos os blocos do Painel (perfil → meta → grade 2 colunas →
+     tempo investido → Recém zerados → próxima seção). Sem margens extras. */
+  .dashboard-stats-grid {
+    gap: 12px !important;
+  }
+  .dashboard-page > section + section,
+  .dashboard-page [class*="space-y-"] > * + *,
+  .dashboard-main-grid {
+    margin-top: 12px !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   WRAP-UP ANUAL — ajustes desktop (W1–W5), ≥1024px somente
+   ════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  /* W1 — card GOTY: grade de 3 quadros com colunas fluidas e min-width:0
+     (complementa lg:grid-cols-3 do JSX; impede invasão de "15/03/2026") */
+  .goty-card [class*="lg:grid-cols-3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px;
+  }
+  .goty-card [class*="lg:grid-cols-3"] > * {
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Fallback a ~1024–1279px: cada quadro fica < 150px e a data não cabe em 15px.
+     Vira 2 colunas com "Zerado em" ocupando a linha inteira — reordenado só
+     visualmente (order/grid-column), HTML intacto. */
+  @media (max-width: 1279.98px) {
+    .goty-card [class*="lg:grid-cols-3"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .goty-card [class*="lg:grid-cols-3"] > *:nth-child(2) {
+      order: 3;
+      grid-column: 1 / -1;
+    }
+    .goty-card [class*="lg:grid-cols-3"] > *:nth-child(3) {
+      order: 2;
+    }
+  }
+
+  /* Fallback a ~1024–1279px: cada quadro fica < 150px e a data não cabe em 15px.
+     Vira 2 colunas com "Zerado em" na linha inteira — reordenado só visualmente (order), HTML intacto. */
+  @media (max-width: 1279.98px) {
+    .goty-card [class*="lg:grid-cols-3"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .goty-card [class*="lg:grid-cols-3"] > *:nth-child(2) {
+      order: 3;
+      grid-column: 1 / -1;
+    }
+    .goty-card [class*="lg:grid-cols-3"] > *:nth-child(3) {
+      order: 2;
+    }
+  }
+
+  /* W3 — cards de gráfico: coluna flexível, área de barras ocupa o espaço vazio */
+  .wu-chart-row {
+    align-items: stretch;
+  }
+  .wu-chart-row > div:first-child {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+  }
+  /* Área das barras (inline style minHeight:'9rem' permanece como piso; aqui ela cresce) */
+  .wu-chart-row > div:first-child > [style*="min-height"] {
+    flex: 1;
+    min-height: 180px;
+    align-items: flex-end;
+  }
+  /* Painéis laterais (Média Geral / Média Geral Histórica) com a mesma altura do gráfico */
+  .wu-chart-row > div:last-child {
+    height: 100%;
+  }
+  /* Evolução: barra lateral "Desempenho por Ano" same-height, conteúdo no topo */
+  .wu-evolution-row {
+    align-items: stretch;
+  }
+  .wu-evolution-row > div:first-child {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+  }
+  .wu-evolution-row > div:first-child > div[class*="h-36"] {
+    flex: 1;
+    min-height: 180px;
+    height: auto;
+  }
+  .wu-evolution-row > div:last-child {
+    height: 100%;
+  }
+
+  /* W2 — Prêmios do Ano: grade de prêmios ocupa exatamente a altura do card GOTY */
+  [class*="lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)"] > div[class*="lg:h-full"][class*="repeat\(5,1fr\)"] {
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(5, 1fr);
+  }
+
+  .wu-cal-grid {
+    grid-auto-rows: auto;
+  }
+  .wu-cal-cover {
+    width: clamp(44px, 4vw, 56px);
+    height: auto;
+    align-self: center;
+  }
+
+  /* W5a — KPIs do Resumo: valor em uma linha; remove o piso fixo de 36px que gerava espaço vazio */
+  [class*="lg:grid-cols-6"] > div [class*="min-h-[36px]"] {
+    min-height: 0;
+  }
 }

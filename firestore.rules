@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAppOwner() {
+      return isSignedIn() && (
+        request.auth.uid == 'qBBKffxqWAMhKJP2YrXvM3Jdvke2' ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == 'filipeaurellio@gmail.com')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 255)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000));
+    }
+
+    function isValidGame(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.status in ['jogando', 'fila', 'pausado', 'wishlist', 'zerado', 'abandonado'] &&
+             data.console is string && data.console.size() <= 100 &&
+             (!('id' in data) || (data.id is string && data.id.size() <= 128)) &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+             (!('genero' in data) || data.genero == null || (data.genero is string && data.genero.size() <= 100)) &&
+             (!('fileName' in data) || data.fileName == null || (data.fileName is string && data.fileName.size() <= 255)) &&
+             (!('capa' in data) || data.capa == null || (data.capa is string && data.capa.size() <= 2000)) &&
+             (!('tempo' in data) || data.tempo == null || (data.tempo is string && data.tempo.size() <= 50)) &&
+             (!('hltb' in data) || data.hltb == null || (data.hltb is string && data.hltb.size() <= 50)) &&
+             (!('hltb_real' in data) || data.hltb_real == null || (data.hltb_real is string && data.hltb_real.size() <= 50)) &&
+             (!('anotacoes' in data) || data.anotacoes == null || (data.anotacoes is string && data.anotacoes.size() <= 20000)) &&
+             (!('data_inicio' in data) || data.data_inicio == null || (data.data_inicio is string && data.data_inicio.size() <= 50)) &&
+             (!('data_zerado' in data) || data.data_zerado == null || (data.data_zerado is string && data.data_zerado.size() <= 50)) &&
+             (!('nota' in data) || data.nota == null || (data.nota is number && data.nota >= 0 && data.nota <= 11)) &&
+             (!('ano_zerado' in data) || data.ano_zerado == null || (data.ano_zerado is number && data.ano_zerado >= 1970 && data.ano_zerado <= 2100)) &&
+             (!('ano_lancamento' in data) || data.ano_lancamento == null || (data.ano_lancamento is number && data.ano_lancamento >= 1950 && data.ano_lancamento <= 2100)) &&
+             (!('progressPercent' in data) || data.progressPercent == null || (data.progressPercent is number && data.progressPercent >= 0 && data.progressPercent <= 100)) &&
+             (!('tempoMinutos' in data) || data.tempoMinutos == null || (data.tempoMinutos is number && data.tempoMinutos >= 0)) &&
+             (!('sessoes' in data) || data.sessoes == null || (data.sessoes is list && data.sessoes.size() <= 500)) &&
+             (!('bossLadder' in data) || data.bossLadder == null || (data.bossLadder is list && data.bossLadder.size() <= 100)) &&
+             (!('rubric' in data) || data.rubric == null || data.rubric is map) &&
+             (!('developer' in data) || data.developer == null || (data.developer is string && data.developer.size() <= 100)) &&
+             (!('publisher' in data) || data.publisher == null || (data.publisher is string && data.publisher.size() <= 100)) &&
+             (!('currentStage' in data) || data.currentStage == null || (data.currentStage is string && data.currentStage.size() <= 100)) &&
+             (!('estimatedRemaining' in data) || data.estimatedRemaining == null || (data.estimatedRemaining is string && data.estimatedRemaining.size() <= 50)) &&
+             (!('isArcadeRun' in data) || data.isArcadeRun == null || data.isArcadeRun is bool) &&
+             (!('got_jogo' in data) || data.got_jogo is bool) &&
+             (!('got_gameplay' in data) || data.got_gameplay is bool) &&
+             (!('got_narrativa' in data) || data.got_narrativa is bool) &&
+             (!('got_arte' in data) || data.got_arte is bool) &&
+             (!('got_indie' in data) || data.got_indie is bool) &&
+             (!('got_surpresa' in data) || data.got_surpresa is bool) &&
+             (!('got_retro' in data) || data.got_retro is bool) &&
+             (!('got_dificil' in data) || data.got_dificil is bool) &&
+             (!('got_pior' in data) || data.got_pior is bool) &&
+             (!('prioridade' in data) || data.prioridade == null || data.prioridade is bool) &&
+             (!('prioridadeEm' in data) || data.prioridadeEm == null || data.prioridadeEm is number);
+    }
+
+    // Global Games repository (Public read, Owner-only write)
+    match /games/{gameId} {
+      allow read: if true;
+      allow create: if isAppOwner() && isValidId(gameId) && isValidGame(incoming());
+      allow update: if isAppOwner() && isValidId(gameId) && isValidGame(incoming());
+      allow delete: if isAppOwner() && isValidId(gameId);
+    }
+
+    function isValidSettings(data) {
+      return (!('avatar' in data) || (data.avatar == null || (data.avatar is string && data.avatar.size() <= 300000))) &&
+             (!('metaZerados' in data) || ((data.metaZerados is int || data.metaZerados is number) && data.metaZerados >= 1 && data.metaZerados <= 500)) &&
+             (!('metaPorAno' in data) || (data.metaPorAno is map &&
+               (!('2026' in data.metaPorAno) || ((data.metaPorAno['2026'] is int || data.metaPorAno['2026'] is number) && data.metaPorAno['2026'] >= 1 && data.metaPorAno['2026'] <= 500)) &&
+               (!('2025' in data.metaPorAno) || ((data.metaPorAno['2025'] is int || data.metaPorAno['2025'] is number) && data.metaPorAno['2025'] >= 1 && data.metaPorAno['2025'] <= 500)) &&
+               (!('2027' in data.metaPorAno) || ((data.metaPorAno['2027'] is int || data.metaPorAno['2027'] is number) && data.metaPorAno['2027'] >= 1 && data.metaPorAno['2027'] <= 500))
+             )) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    // Site Settings (Public read, Owner-only write)
+    match /settings/{docId} {
+      allow read: if true;
+      allow create: if isAppOwner() && isValidId(docId) && isValidSettings(incoming());
+      allow update: if isAppOwner() && isValidId(docId) && isValidSettings(incoming());
+      allow delete: if isAppOwner() && isValidId(docId);
+    }
+
+    // User Profile Rules (private to authenticated user)
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+    }
+  }
+}
